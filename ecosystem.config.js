@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'rec-portal',
-      cwd: '/var/www/rec',
+      cwd: '/srv/rec-registration',
       script: 'node_modules/next/dist/bin/next',
       args: 'start -p 3001',
       instances: 1,

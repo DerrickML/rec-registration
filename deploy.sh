@@ -65,4 +65,4 @@ touch "$LOGFILE" || fail "Could not create $LOGFILE"
     log "📦 Using npm ci (lockfile exact)"
     # npm ci is strict—fallback to npm install in case of peer issues
     if ! npm ci; then
-      log "⚠️ npm ci
+      log "⚠️ npm ci"

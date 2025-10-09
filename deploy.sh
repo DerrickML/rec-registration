@@ -11,16 +11,25 @@ PORT="${PORT:-3001}"         # keep in sync with ecosystem.config.js
 LOGFILE="${DIR}/deploy.log"
 
 #############################################
+# Ensure directory & logging
+#############################################
+[ -d "$DIR" ] || { echo "❌ Directory $DIR does not exist"; exit 1; }
+mkdir -p "$(dirname "$LOGFILE")"
+touch "$LOGFILE" || { echo "❌ Could not create $LOGFILE"; exit 1; }
+
+# Log everything to console AND file
+exec > >(tee -a "$LOGFILE") 2>&1
+
+#############################################
 # Helpers
 #############################################
 log()  { printf "%s %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
 fail() { printf "❌ %s\n" "$*" >&2; exit 1; }
 
 #############################################
-# Ensure PATH has node/npm/pm2 (adjust if using nvm)
+# PATH and runtime tools (add nvm if present)
 #############################################
 export PATH="$PATH:/usr/local/bin:$HOME/.npm-global/bin"
-# Load nvm if present (common on servers)
 if [ -s "$HOME/.nvm/nvm.sh" ]; then
   # shellcheck source=/dev/null
   . "$HOME/.nvm/nvm.sh"
@@ -33,36 +42,73 @@ command -v pm2  >/dev/null 2>&1 || fail "pm2 not found on PATH"
 log "🧾 Versions: node $(node -v), npm $(npm -v), pm2 $(pm2 -v)"
 
 #############################################
-# Prepare directory & log
+# Deploy
 #############################################
-[ -d "$DIR" ] || fail "Directory $DIR does not exist"
 cd "$DIR" || fail "Could not cd to $DIR"
+log "📁 Working dir: $DIR"
+log "🌿 Branch: $BRANCH  |  App: $APP  |  Port: $PORT"
 
-# Create log file if missing
-touch "$LOGFILE" || fail "Could not create $LOGFILE"
+# Git
+CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD || echo 'unknown')"
+log "🔄 Git: on $CURRENT_BRANCH → pulling origin/$BRANCH"
+git fetch origin || fail "git fetch failed"
+git checkout "$BRANCH" || fail "git checkout $BRANCH failed"
+git pull --ff-only origin "$BRANCH" || fail "git pull failed"
 
-{
-  log "📁 Working dir: $DIR"
-  log "🌿 Branch: $BRANCH  |  App: $APP  |  Port: $PORT"
+# Install deps (auto-detect pnpm)
+if [ -f "pnpm-lock.yaml" ] && command -v pnpm >/dev/null 2>&1; then
+  log "📦 Using pnpm (frozen lockfile)"
+  pnpm install --frozen-lockfile || fail "pnpm install failed"
+  PKG_RUN="pnpm run"
+else
+  log "📦 Using npm ci (lockfile exact)"
+  if ! npm ci; then
+    log "⚠️ npm ci failed, retrying with npm install --legacy-peer-deps"
+    npm install --legacy-peer-deps || fail "npm install failed"
+  fi
+  PKG_RUN="npm run"
+fi
 
-  ###########################################
-  # Git pull
-  ###########################################
-  CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD || echo 'unknown')"
-  log "🔄 Git: on $CURRENT_BRANCH → pulling origin/$BRANCH"
-  git fetch origin || fail "git fetch failed"
-  git checkout "$BRANCH" || fail "git checkout $BRANCH failed"
-  git pull --ff-only origin "$BRANCH" || fail "git pull failed"
+# Build
+log "🏗️ Building production bundle"
+$PKG_RUN build || fail "Build failed"
 
-  ###########################################
-  # Install deps (auto-detect npm or pnpm)
-  ###########################################
-  if [ -f "pnpm-lock.yaml" ] && command -v pnpm >/dev/null 2>&1; then
-    log "📦 Using pnpm (frozen lockfile)"
-    pnpm install --frozen-lockfile || fail "pnpm install failed"
-    PKG_RUN="pnpm run"
+# PM2
+if pm2 describe "$APP" >/dev/null 2>&1; then
+  log "🚀 Restarting $APP via PM2"
+  pm2 restart "$APP" || fail "PM2 restart failed"
+else
+  log "🚀 Starting $APP via ecosystem.config.js"
+  pm2 start ecosystem.config.js --only "$APP" || fail "PM2 start failed"
+fi
+pm2 save || fail "PM2 save failed"
+
+# Health check
+log "🩺 Health check on port $PORT"
+if command -v curl >/dev/null 2>&1; then
+  if curl -fsS "http://127.0.0.1:${PORT}/" >/dev/null 2>&1; then
+    log "✅ HTTP check OK on 127.0.0.1:${PORT}"
   else
-    log "📦 Using npm ci (lockfile exact)"
-    # npm ci is strict—fallback to npm install in case of peer issues
-    if ! npm ci; then
-      log "⚠️ npm ci"
+    log "ℹ️ HTTP check not definitive (custom routes?). Verifying port listener…"
+  fi
+fi
+
+if command -v ss >/dev/null 2>&1; then
+  if ss -ltn | grep -q ":${PORT}"; then
+    log "✅ Port ${PORT} is listening"
+  else
+    log "⚠️ Port ${PORT} not detected as listening; check pm2 logs"
+  fi
+elif command -v lsof >/dev/null 2>&1; then
+  if lsof -i :"${PORT}" | grep -q LISTEN; then
+    log "✅ Port ${PORT} is listening"
+  else
+    log "⚠️ Port ${PORT} not detected as listening; check pm2 logs"
+  fi
+fi
+
+log "📜 Tail last lines of PM2 logs for ${APP}:"
+pm2 logs "$APP" --lines 20 || true
+
+log "🎉 Deployment complete"
+log "🌐 If proxied: https://rec.nrep.ug"

@@ -1,28 +1,25 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Calendar,
-  Clock,
-  MapPin,
-  Users,
-  Building,
-  ArrowLeft,
-  Loader2,
-  AlertCircle,
-  Sparkles,
-  Filter,
-  Download,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react"
+import { Tabs, TabsContent } from "@/components/ui/tabs"
+import { Calendar, MapPin, Building, Loader2, AlertCircle, Filter } from "lucide-react"
 import { apiService } from "../../lib/api-service"
+import {
+  formatTimeWithTimezone,
+  formatDateRange,
+  getDayDate,
+  getSessionsByDay,
+  getFilteredSessions,
+  groupSessionsByTimeSlot,
+} from "../../lib/program-utils"
+import ProgramHeader from "../../components/program/program-header"
+import ProgramStats from "../../components/program/program-stats"
+import DayTab from "../../components/program/day-tab"
+import TimeSlotAccordion from "../../components/program/time-slot-accordion"
 
 export default function ProgramPage() {
   const [conference, setConference] = useState(null)
@@ -71,85 +68,6 @@ export default function ProgramPage() {
     fetchData()
   }, [])
 
-  const formatTime = (isoDateTime) => {
-    if (!isoDateTime) return ""
-    // Parse the UTC time from database
-    const date = new Date(isoDateTime)
-    return date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    })
-  }
-
-  const formatTimeWithTimezone = (isoDateTime) => {
-    if (!isoDateTime) return { kampala: "", local: "", timezone: "" }
-
-    // Parse the UTC datetime string from Appwrite
-    // Format: 2025-10-20T10:00:00.000+00:00
-    const utcDate = new Date(isoDateTime)
-
-    // Convert UTC to Africa/Kampala timezone (UTC+3)
-    const kampalaTime = utcDate.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-      timeZone: "Africa/Kampala",
-    })
-
-    // Convert UTC to user's local timezone
-    const localTime = utcDate.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    })
-
-    // Get user's timezone abbreviation
-    const localTimezone = new Intl.DateTimeFormat("en-US", {
-      timeZoneName: "short",
-    })
-      .formatToParts(utcDate)
-      .find((part) => part.type === "timeZoneName")?.value || ""
-
-    return {
-      kampala: kampalaTime,
-      local: localTime,
-      timezone: localTimezone,
-    }
-  }
-
-  const formatDateRange = (startDate, endDate) => {
-    const start = new Date(startDate)
-    const end = new Date(endDate)
-
-    if (start.getMonth() === end.getMonth()) {
-      return `${start.toLocaleDateString("en-US", { month: "long" })} ${start.getDate()}-${end.getDate()}, ${start.getFullYear()}`
-    }
-
-    return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}, ${start.getFullYear()}`
-  }
-
-  const getDayDate = (dayNumber) => {
-    if (!conference?.startDate) return ""
-    const startDate = new Date(conference.startDate)
-    const dayDate = new Date(startDate)
-    dayDate.setDate(startDate.getDate() + (dayNumber - 1))
-    return dayDate.toLocaleDateString("en-US", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    })
-  }
-
-  const getSessionsByDay = (day) => {
-    return sessions.filter((session) => session.day === day)
-  }
-
-  const getFilteredSessions = (daySessions) => {
-    if (selectedHall === "all") return daySessions
-    return daySessions.filter((session) => session.venueHall === selectedHall)
-  }
-
   const toggleTimeSlot = (timeKey) => {
     setExpandedTimeSlots((prev) => ({
       ...prev,
@@ -160,28 +78,6 @@ export default function ProgramPage() {
   const isTimeSlotExpanded = (timeKey) => {
     // Default to expanded (true) if not set
     return expandedTimeSlots[timeKey] !== false
-  }
-
-  const groupSessionsByTimeSlot = (daySessions) => {
-    const grouped = {}
-    daySessions.forEach((session) => {
-      // Create a time-only key for grouping (ignoring date part)
-      const startTime = new Date(session.startTime)
-      const endTime = new Date(session.toTime)
-
-      // Create unique key based on time only
-      const timeKey = `${startTime.toISOString()}-${endTime.toISOString()}`
-
-      if (!grouped[timeKey]) {
-        grouped[timeKey] = {
-          startTime: session.startTime,
-          toTime: session.toTime,
-          sessions: []
-        }
-      }
-      grouped[timeKey].sessions.push(session)
-    })
-    return grouped
   }
 
   if (loading) {
@@ -204,20 +100,17 @@ export default function ProgramPage() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
           <div className="mt-4 text-center">
-            <Link href="/">
-              <Button className="bg-gradient-to-r from-[#0B7186] to-[#FFB803] hover:from-[#054653] hover:to-[#FFB803] text-white">
-                <ArrowLeft className="mr-2 w-4 h-4" />
-                Back to Home
-              </Button>
-            </Link>
+            <Button className="bg-gradient-to-r from-[#0B7186] to-[#FFB803] hover:from-[#054653] hover:to-[#FFB803] text-white">
+              Back to Home
+            </Button>
           </div>
         </div>
       </div>
     )
   }
 
-  const daySessions = selectedDay ? getSessionsByDay(selectedDay) : []
-  const filteredSessions = getFilteredSessions(daySessions)
+  const daySessions = selectedDay ? getSessionsByDay(sessions, selectedDay) : []
+  const filteredSessions = getFilteredSessions(daySessions, selectedHall)
   const groupedSessions = groupSessionsByTimeSlot(filteredSessions)
   const halls = program?.venueHalls || []
 
@@ -232,38 +125,7 @@ export default function ProgramPage() {
 
       <div className="relative z-10">
         {/* Header */}
-        <header className="bg-white/95 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <Link href="/">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-[#0B7186] hover:text-[#054653] hover:bg-[#0B7186]/10"
-                  >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back
-                  </Button>
-                </Link>
-                <div className="w-10 h-10 bg-gradient-to-r from-[#0B7186] to-[#FFB803] rounded-full flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-gray-800">Conference Program</h1>
-                  <p className="text-sm text-gray-600">{conference?.title}</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-4">
-                <Link href="/register">
-                  <Button className="bg-gradient-to-r from-[#0B7186] to-[#FFB803] hover:from-[#054653] hover:to-[#FFB803] text-white">
-                    Register Now
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </header>
+        <ProgramHeader conferenceTitle={conference?.title} />
 
         {/* Hero Section */}
         <section className="py-12 px-4 sm:px-6 lg:px-8">
@@ -292,37 +154,7 @@ export default function ProgramPage() {
             </div>
 
             {/* Program Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <Card className="bg-white/95 backdrop-blur-sm border-gray-200 shadow-lg">
-                <CardContent className="flex items-center justify-between p-6">
-                  <div>
-                    <p className="text-3xl font-bold text-[#0B7186]">{program?.daysCount}</p>
-                    <p className="text-gray-600">Days</p>
-                  </div>
-                  <Calendar className="w-10 h-10 text-[#FFB803]" />
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white/95 backdrop-blur-sm border-gray-200 shadow-lg">
-                <CardContent className="flex items-center justify-between p-6">
-                  <div>
-                    <p className="text-3xl font-bold text-[#0B7186]">{sessions.length}</p>
-                    <p className="text-gray-600">Sessions</p>
-                  </div>
-                  <Users className="w-10 h-10 text-[#FFB803]" />
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white/95 backdrop-blur-sm border-gray-200 shadow-lg">
-                <CardContent className="flex items-center justify-between p-6">
-                  <div>
-                    <p className="text-3xl font-bold text-[#0B7186]">{halls.length}</p>
-                    <p className="text-gray-600">Halls/Rooms</p>
-                  </div>
-                  <Building className="w-10 h-10 text-[#FFB803]" />
-                </CardContent>
-              </Card>
-            </div>
+            <ProgramStats daysCount={program?.daysCount} sessionCount={sessions.length} hallsCount={halls.length} />
 
             {/* Sessions Schedule Card */}
             <Card className="bg-white/95 backdrop-blur-sm border-gray-200 shadow-xl overflow-hidden">
@@ -356,11 +188,7 @@ export default function ProgramPage() {
               </CardHeader>
 
               <CardContent className="p-0">
-                <Tabs
-                  value={String(selectedDay)}
-                  onValueChange={(value) => setSelectedDay(parseInt(value))}
-                  className="w-full"
-                >
+                <Tabs value={String(selectedDay)} className="w-full">
                   {/* Day Tabs Section */}
                   <div className="px-6 py-6 bg-gradient-to-br from-gray-50 via-gray-50 to-white border-b border-gray-100">
                     <div
@@ -368,65 +196,19 @@ export default function ProgramPage() {
                       style={{ gridTemplateColumns: `repeat(${program?.daysCount || 1}, minmax(0, 1fr))` }}
                     >
                       {Array.from({ length: program?.daysCount || 0 }, (_, i) => i + 1).map((day) => {
-                        const daySessionCount = getSessionsByDay(day).length
-                        const dayDate = getDayDate(day)
+                        const daySessionCount = getSessionsByDay(sessions, day).length
+                        const dayDate = getDayDate(conference?.startDate, day)
                         const isActive = selectedDay === day
+
                         return (
-                          <button
+                          <DayTab
                             key={day}
+                            day={day}
+                            dayDate={dayDate}
+                            sessionCount={daySessionCount}
+                            isActive={isActive}
                             onClick={() => setSelectedDay(day)}
-                            className={`
-                              relative group rounded-2xl border-2 transition-all duration-300 overflow-hidden
-                              ${
-                                isActive
-                                  ? "border-[#0B7186] bg-gradient-to-br from-[#0B7186] to-[#FFB803] shadow-lg scale-[1.02]"
-                                  : "border-gray-200 bg-white hover:border-[#0B7186]/30 hover:shadow-md hover:scale-[1.01]"
-                              }
-                            `}
-                          >
-                            {/* Background Pattern */}
-                            <div className="absolute inset-0 opacity-5">
-                              <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white to-transparent" />
-                            </div>
-
-                            {/* Content */}
-                            <div className="relative px-4 py-6 flex flex-col items-center justify-center gap-2 min-h-[120px]">
-                              <Calendar
-                                className={`w-8 h-8 mb-1 transition-transform duration-300 ${isActive ? "text-white scale-110" : "text-[#0B7186] group-hover:scale-110"}`}
-                              />
-                              <div className="flex flex-col items-center gap-1">
-                                <span
-                                  className={`text-lg font-bold tracking-tight ${isActive ? "text-white" : "text-gray-900"}`}
-                                >
-                                  Day {day}
-                                </span>
-                                {dayDate && (
-                                  <span
-                                    className={`text-xs font-semibold ${isActive ? "text-white/90" : "text-gray-600"}`}
-                                  >
-                                    {dayDate}
-                                  </span>
-                                )}
-                              </div>
-                              <div
-                                className={`
-                                  mt-1 px-3 py-1 rounded-full text-xs font-medium
-                                  ${
-                                    isActive
-                                      ? "bg-white/20 text-white backdrop-blur-sm"
-                                      : "bg-gray-100 text-gray-700 group-hover:bg-[#0B7186]/10 group-hover:text-[#0B7186]"
-                                  }
-                                `}
-                              >
-                                {daySessionCount} {daySessionCount === 1 ? "session" : "sessions"}
-                              </div>
-                            </div>
-
-                            {/* Active Indicator */}
-                            {isActive && (
-                              <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/40" />
-                            )}
-                          </button>
+                          />
                         )
                       })}
                     </div>
@@ -445,88 +227,16 @@ export default function ProgramPage() {
                           </div>
                         ) : (
                           <div className="space-y-6">
-                            {Object.entries(groupedSessions).map(([timeKey, timeSlotData]) => {
-                              const startTimes = formatTimeWithTimezone(timeSlotData.startTime)
-                              const endTimes = formatTimeWithTimezone(timeSlotData.toTime)
-                              const showBothTimezones = startTimes.kampala !== startTimes.local
-                              const sessionsInSlot = timeSlotData.sessions
-                              const isExpanded = isTimeSlotExpanded(timeKey)
-
-                              return (
-                                <div key={timeKey} className="space-y-4">
-                                  {/* Time Header - Clickable Accordion */}
-                                  <button
-                                    onClick={() => toggleTimeSlot(timeKey)}
-                                    className="w-full sticky top-[72px] z-10 bg-gradient-to-r from-[#0B7186] to-[#FFB803] text-white px-5 py-4 rounded-xl shadow-lg backdrop-blur-sm hover:shadow-xl transition-all duration-300 group"
-                                  >
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                                      <div className="flex items-center space-x-3 flex-1">
-                                        <div className="bg-white/20 p-2 rounded-lg flex-shrink-0 group-hover:bg-white/30 transition-colors">
-                                          <Clock className="w-5 h-5" />
-                                        </div>
-                                        <div className="flex flex-col gap-0.5 text-left flex-1">
-                                          <span className="font-bold text-lg tracking-tight">
-                                            {startTimes.kampala} - {endTimes.kampala}
-                                          </span>
-                                          <span className="text-xs text-white/85 font-medium">
-                                            East Africa Time (EAT / UTC+3)
-                                          </span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                          {showBothTimezones && (
-                                            <div className="hidden sm:block bg-white/15 px-4 py-2 rounded-lg backdrop-blur-sm border border-white/20">
-                                              <div className="flex flex-col gap-0.5">
-                                                <div className="text-sm text-white font-semibold">
-                                                  {startTimes.local} - {endTimes.local}
-                                                </div>
-                                                <div className="text-xs text-white/80 font-medium">
-                                                  Your time ({startTimes.timezone})
-                                                </div>
-                                              </div>
-                                            </div>
-                                          )}
-                                          <div className="bg-white/20 px-3 py-1.5 rounded-lg backdrop-blur-sm">
-                                            <span className="text-xs font-semibold">
-                                              {sessionsInSlot.length} {sessionsInSlot.length === 1 ? "session" : "sessions"}
-                                            </span>
-                                          </div>
-                                          <div className="bg-white/20 p-2 rounded-lg group-hover:bg-white/30 transition-colors">
-                                            {isExpanded ? (
-                                              <ChevronUp className="w-5 h-5" />
-                                            ) : (
-                                              <ChevronDown className="w-5 h-5" />
-                                            )}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                    {showBothTimezones && (
-                                      <div className="sm:hidden mt-3 bg-white/15 px-4 py-2 rounded-lg backdrop-blur-sm border border-white/20">
-                                        <div className="flex flex-col gap-0.5">
-                                          <div className="text-sm text-white font-semibold">
-                                            {startTimes.local} - {endTimes.local}
-                                          </div>
-                                          <div className="text-xs text-white/80 font-medium">
-                                            Your time ({startTimes.timezone})
-                                          </div>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </button>
-
-                                  {/* Sessions Grid - Collapsible */}
-                                  {isExpanded && (
-                                    <div
-                                      className={`grid gap-5 animate-in slide-in-from-top-2 duration-300 ${sessionsInSlot.length > 1 ? "md:grid-cols-2" : "md:grid-cols-1"}`}
-                                    >
-                                      {sessionsInSlot.map((session) => (
-                                        <SessionCard key={session.$id} session={session} />
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              )
-                            })}
+                            {Object.entries(groupedSessions).map(([timeKey, timeSlotData]) => (
+                              <TimeSlotAccordion
+                                key={timeKey}
+                                timeKey={timeKey}
+                                timeSlotData={timeSlotData}
+                                isExpanded={isTimeSlotExpanded(timeKey)}
+                                onToggle={() => toggleTimeSlot(timeKey)}
+                                formatTimeWithTimezone={formatTimeWithTimezone}
+                              />
+                            ))}
                           </div>
                         )}
                       </TabsContent>
@@ -548,86 +258,5 @@ export default function ProgramPage() {
         </footer>
       </div>
     </div>
-  )
-}
-
-function SessionCard({ session }) {
-  const [expanded, setExpanded] = useState(false)
-
-  return (
-    <Card className="bg-white border-gray-200 shadow-md hover:shadow-xl transition-all duration-300 hover:border-[#0B7186]/30 group">
-      <CardContent className="p-6">
-        {/* Session Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-3 flex-wrap">
-              <Badge className="bg-[#0B7186]/10 text-[#0B7186] border border-[#0B7186]/20 font-medium px-3 py-1">
-                <MapPin className="w-3 h-3 mr-1 inline" />
-                {session.venueHall}
-              </Badge>
-              {session.theme && (
-                <Badge
-                  variant="outline"
-                  className="border-[#FFB803] text-[#FFB803] bg-[#FFB803]/5 font-medium px-3 py-1"
-                >
-                  {session.theme}
-                </Badge>
-              )}
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2 leading-tight group-hover:text-[#0B7186] transition-colors">
-              {session.title}
-            </h3>
-          </div>
-        </div>
-
-        {/* Organizer */}
-        {session.organizer && (
-          <div className="mb-4 flex items-center text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
-            <Building className="w-4 h-4 mr-2 text-[#0B7186] flex-shrink-0" />
-            <span className="font-medium">{session.organizer}</span>
-          </div>
-        )}
-
-        {/* Preamble */}
-        {session.preamble && (
-          <div className="mb-4">
-            <div
-              className={`rich-text-content text-sm text-gray-700 leading-relaxed ${!expanded ? "line-clamp-3" : ""}`}
-              dangerouslySetInnerHTML={{ __html: session.preamble }}
-            />
-            {session.preamble.length > 200 && (
-              <button
-                onClick={() => setExpanded(!expanded)}
-                className="text-[#0B7186] text-sm font-semibold hover:text-[#054653] mt-3 flex items-center gap-1 transition-colors"
-              >
-                {expanded ? (
-                  <>
-                    <span>Show less</span>
-                    <span className="text-xs">↑</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Read more</span>
-                    <span className="text-xs">→</span>
-                  </>
-                )}
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Speakers */}
-        {session.speakers && (
-          <div className="mt-5 pt-5 border-t border-gray-200">
-            <div className="flex items-start gap-3">
-              <div className="bg-[#FFB803]/10 p-2 rounded-lg flex-shrink-0">
-                <Users className="w-4 h-4 text-[#FFB803]" />
-              </div>
-              <div className="rich-text-content text-sm text-gray-700 flex-1" dangerouslySetInnerHTML={{ __html: session.speakers }} />
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
   )
 }

@@ -54,6 +54,8 @@ export default function RegistrationForm() {
   const [exhibitorCapacity, setExhibitorCapacity] = useState(null)
 
   const [conference, setConference] = useState(null)
+  const [registrationClosed, setRegistrationClosed] = useState(false)
+  const [checkingStatus, setCheckingStatus] = useState(true)
 
   // Exhibitor members data
   const [exhibitorMembers, setExhibitorMembers] = useState([
@@ -111,8 +113,15 @@ export default function RegistrationForm() {
       try {
         const activeConference = await apiService.getActiveConference()
         setConference(activeConference)
+
+        // Check registration status
+        if (!activeConference.registrationStatus) {
+          setRegistrationClosed(true)
+        }
       } catch (err) {
         console.error("Failed to fetch conference:", err)
+      } finally {
+        setCheckingStatus(false)
       }
     }
 
@@ -580,6 +589,147 @@ export default function RegistrationForm() {
 
   const handleCountryChange = (value) => {
     setFormData((prev) => ({ ...prev, country: value }))
+  }
+
+  // Loading state while checking registration status
+  if (checkingStatus) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
+        {/* Animated background elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#FFB803] rounded-full mix-blend-multiply filter blur-xl opacity-5 animate-pulse"></div>
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[#0B7186] rounded-full mix-blend-multiply filter blur-xl opacity-5 animate-pulse animation-delay-2000"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#054653] rounded-full mix-blend-multiply filter blur-xl opacity-3 animate-pulse animation-delay-4000"></div>
+        </div>
+
+        <div className="relative z-10 min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-[#0B7186] mx-auto mb-4" />
+            <p className="text-gray-600 text-lg">Checking registration status...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Registration closed screen
+  if (registrationClosed) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
+        {/* Animated background elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#FFB803] rounded-full mix-blend-multiply filter blur-xl opacity-5 animate-pulse"></div>
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[#0B7186] rounded-full mix-blend-multiply filter blur-xl opacity-5 animate-pulse animation-delay-2000"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#054653] rounded-full mix-blend-multiply filter blur-xl opacity-3 animate-pulse animation-delay-4000"></div>
+        </div>
+
+        <div className="relative z-10 min-h-screen py-8 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+          <div className="max-w-2xl w-full">
+            <Card className="bg-white/95 backdrop-blur-sm border-gray-200 shadow-2xl overflow-hidden">
+              <CardHeader className="text-center border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white pb-8 pt-12">
+                <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-red-500 to-red-600 rounded-full mb-6 mx-auto shadow-lg">
+                  <AlertCircle className="w-10 h-10 text-white" />
+                </div>
+                <CardTitle className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
+                  Registration Closed
+                </CardTitle>
+                <CardDescription className="text-lg text-gray-600">
+                  {conference?.title || "Conference"} Registration
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="pt-8 pb-10">
+                <div className="space-y-6">
+                  {/* Main Message */}
+                  <div className="text-center space-y-3">
+                    <p className="text-lg text-gray-700 font-medium">
+                      We're sorry, but registration for this conference is currently closed.
+                    </p>
+                    <p className="text-gray-600">
+                      The registration period has ended and we are no longer accepting new registrations at this time.
+                    </p>
+                  </div>
+
+                  {/* Conference Details */}
+                  {conference && (
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-6 space-y-3 border border-gray-200">
+                      <h3 className="font-semibold text-gray-900 text-lg mb-4">Conference Details</h3>
+                      <div className="space-y-2">
+                        <div className="flex items-start space-x-3">
+                          <Calendar className="w-5 h-5 text-[#0B7186] mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-700">Date</p>
+                            <p className="text-sm text-gray-600">
+                              {new Date(conference.startDate).toLocaleDateString("en-US", {
+                                weekday: "long",
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              })}{" "}
+                              -{" "}
+                              {new Date(conference.endDate).toLocaleDateString("en-US", {
+                                weekday: "long",
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                          <MapPin className="w-5 h-5 text-[#0B7186] mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-700">Location</p>
+                            <p className="text-sm text-gray-600">{conference.location}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                          <Building className="w-5 h-5 text-[#0B7186] mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-700">Venue</p>
+                            <p className="text-sm text-gray-600">{conference.venue}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Alternative Actions */}
+                  <div className="space-y-4 pt-4">
+                    <h3 className="font-semibold text-gray-900 text-center">What you can do</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <Button
+                        onClick={() => (window.location.href = "/program")}
+                        className="h-12 bg-gradient-to-r from-[#0B7186] to-[#054653] hover:from-[#054653] hover:to-[#0B7186] text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                      >
+                        <Calendar className="mr-2 h-5 w-5" />
+                        View Program
+                      </Button>
+                      <Button
+                        onClick={() => (window.location.href = "/")}
+                        variant="outline"
+                        className="h-12 border-2 border-[#0B7186] text-[#0B7186] hover:bg-[#0B7186] hover:text-white font-semibold shadow-md hover:shadow-lg transition-all duration-300"
+                      >
+                        <Building className="mr-2 h-5 w-5" />
+                        Back to Home
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Contact Information */}
+                  <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-gray-700 text-center">
+                      <span className="font-semibold">Need assistance?</span> Please contact the conference organizers
+                      for more information about registration status or future events.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (success) {

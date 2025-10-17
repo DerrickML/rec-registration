@@ -14,6 +14,8 @@ import {
 } from "../../../lib/program-utils"
 import DayTab from "../../../components/program/day-tab"
 import TimeSlotAccordion from "../../../components/program/time-slot-accordion"
+import DownloadProgramButton from "../../../components/program/download-program-button"
+import ShareLinkButton from "../../../components/program/share-link-button"
 
 export default function EmbeddedProgramPage() {
   const [conference, setConference] = useState(null)
@@ -111,6 +113,12 @@ export default function EmbeddedProgramPage() {
 
       <div className="relative z-10 py-6 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
+          {/* Action Buttons */}
+          {/* <div className="flex justify-center items-center gap-4 mb-6">
+            <DownloadProgramButton conference={conference} program={program} sessions={sessions} />
+            <ShareLinkButton conference={conference} />
+          </div> */}
+
           {/* Sessions Schedule Card */}
           <Card className="bg-white/95 backdrop-blur-sm border-gray-200 shadow-xl overflow-hidden">
             {/* Header with Filter */}

@@ -20,6 +20,8 @@ import ProgramHeader from "../../components/program/program-header"
 import ProgramStats from "../../components/program/program-stats"
 import DayTab from "../../components/program/day-tab"
 import TimeSlotAccordion from "../../components/program/time-slot-accordion"
+import DownloadProgramButton from "../../components/program/download-program-button"
+import ShareLinkButton from "../../components/program/share-link-button"
 
 export default function ProgramPage() {
   const [conference, setConference] = useState(null)
@@ -155,6 +157,12 @@ export default function ProgramPage() {
 
             {/* Program Stats */}
             <ProgramStats daysCount={program?.daysCount} sessionCount={sessions.length} hallsCount={halls.length} />
+
+            {/* Action Buttons */}
+            {/* <div className="flex justify-center items-center gap-4 mb-8">
+              <DownloadProgramButton conference={conference} program={program} sessions={sessions} />
+              <ShareLinkButton conference={conference} />
+            </div> */}
 
             {/* Sessions Schedule Card */}
             <Card className="bg-white/95 backdrop-blur-sm border-gray-200 shadow-xl overflow-hidden">

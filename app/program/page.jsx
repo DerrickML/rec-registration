@@ -73,7 +73,7 @@ export default function ProgramPage() {
   const toggleTimeSlot = (timeKey) => {
     setExpandedTimeSlots((prev) => ({
       ...prev,
-      [timeKey]: !prev[timeKey],
+      [timeKey]: prev[timeKey] === false,
     }))
   }
 
@@ -84,10 +84,12 @@ export default function ProgramPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-[#0B7186] mx-auto mb-4" />
-          <p className="text-gray-600">Loading conference program...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30 flex items-center justify-center">
+        <div className="text-center animate-fade-in-scale">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0B7186] to-[#054653] flex items-center justify-center mx-auto mb-5 animate-glow-pulse">
+            <Loader2 className="w-7 h-7 animate-spin text-white" />
+          </div>
+          <p className="text-gray-500 font-medium">Loading conference program...</p>
         </div>
       </div>
     )
@@ -117,12 +119,18 @@ export default function ProgramPage() {
   const halls = program?.venueHalls || []
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#FFB803] rounded-full mix-blend-multiply filter blur-xl opacity-5 animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[#0B7186] rounded-full mix-blend-multiply filter blur-xl opacity-5 animate-pulse animation-delay-2000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#054653] rounded-full mix-blend-multiply filter blur-xl opacity-3 animate-pulse animation-delay-4000"></div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30 relative overflow-hidden">
+      {/* Background accents */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-32 -right-32 w-[400px] h-[400px] bg-gradient-to-br from-[#FFB803]/8 to-transparent rounded-full blur-3xl" />
+        <div className="absolute top-1/3 -left-40 w-[350px] h-[350px] bg-gradient-to-br from-[#0B7186]/6 to-transparent rounded-full blur-3xl" />
+        <div
+          className="absolute inset-0 opacity-[0.02]"
+          style={{
+            backgroundImage: "radial-gradient(circle, #0B7186 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
+          }}
+        />
       </div>
 
       <div className="relative z-10">
@@ -132,25 +140,25 @@ export default function ProgramPage() {
         {/* Hero Section */}
         <section className="py-12 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-8">
-              <Badge className="mb-4 bg-gradient-to-r from-[#0B7186] to-[#FFB803] text-white">
+            <div className="text-center mb-8 animate-fade-in-up">
+              <Badge className="mb-5 px-4 py-1.5 bg-[#0B7186]/8 text-[#0B7186] border border-[#0B7186]/15 text-xs font-semibold rounded-full">
                 {program?.status}
               </Badge>
-              <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-[#0B7186] via-[#054653] to-[#0B7186] bg-clip-text text-transparent mb-4">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-gray-900 mb-5">
                 {program?.title}
               </h1>
-              <div className="flex flex-wrap items-center justify-center gap-6 text-gray-700">
-                <div className="flex items-center space-x-2">
-                  <Calendar className="w-5 h-5 text-[#0B7186]" />
-                  <span className="font-medium">{formatDateRange(conference?.startDate, conference?.endDate)}</span>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <div className="flex items-center space-x-2 px-4 py-2 rounded-full bg-white shadow-sm border border-gray-100">
+                  <Calendar className="w-4 h-4 text-[#0B7186]" />
+                  <span className="text-sm font-medium text-gray-700">{formatDateRange(conference?.startDate, conference?.endDate)}</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <MapPin className="w-5 h-5 text-[#0B7186]" />
-                  <span className="font-medium">{conference?.location}</span>
+                <div className="flex items-center space-x-2 px-4 py-2 rounded-full bg-white shadow-sm border border-gray-100">
+                  <MapPin className="w-4 h-4 text-[#0B7186]" />
+                  <span className="text-sm font-medium text-gray-700">{conference?.location}</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Building className="w-5 h-5 text-[#0B7186]" />
-                  <span className="font-medium">{conference?.venue}</span>
+                <div className="flex items-center space-x-2 px-4 py-2 rounded-full bg-white shadow-sm border border-gray-100">
+                  <Building className="w-4 h-4 text-[#0B7186]" />
+                  <span className="text-sm font-medium text-gray-700">{conference?.venue}</span>
                 </div>
               </div>
             </div>
@@ -165,7 +173,7 @@ export default function ProgramPage() {
             </div> */}
 
             {/* Sessions Schedule Card */}
-            <Card className="bg-white/95 backdrop-blur-sm border-gray-200 shadow-xl overflow-hidden">
+            <Card className="bg-white border border-gray-100 shadow-lg shadow-gray-200/50 rounded-2xl overflow-hidden">
               {/* Header with Title and Filter */}
               <CardHeader className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -257,9 +265,9 @@ export default function ProgramPage() {
         </section>
 
         {/* Footer */}
-        <footer className="bg-gray-800 text-white py-8 px-4 sm:px-6 lg:px-8 mt-12">
+        <footer className="bg-gray-900 text-white py-10 px-4 sm:px-6 lg:px-8 mt-16">
           <div className="max-w-7xl mx-auto text-center">
-            <p className="text-gray-300">
+            <p className="text-gray-500 text-sm">
               © {new Date().getFullYear()} National Renewable Energy Platform (NREP). All rights reserved.
             </p>
           </div>

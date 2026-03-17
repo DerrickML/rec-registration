@@ -762,37 +762,38 @@ export default function RegistrationForm() {
       ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#FFB803] rounded-full mix-blend-multiply filter blur-xl opacity-5 animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[#0B7186] rounded-full mix-blend-multiply filter blur-xl opacity-5 animate-pulse animation-delay-2000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#054653] rounded-full mix-blend-multiply filter blur-xl opacity-3 animate-pulse animation-delay-4000"></div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30 relative overflow-hidden">
+      {/* Background accents */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-32 -right-32 w-[400px] h-[400px] bg-gradient-to-br from-[#FFB803]/8 to-transparent rounded-full blur-3xl" />
+        <div className="absolute top-1/3 -left-40 w-[350px] h-[350px] bg-gradient-to-br from-[#0B7186]/6 to-transparent rounded-full blur-3xl" />
+        <div
+          className="absolute inset-0 opacity-[0.02]"
+          style={{
+            backgroundImage: "radial-gradient(circle, #0B7186 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
+          }}
+        />
       </div>
 
       <div className="relative z-10 min-h-screen py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-[#0B7186] to-[#FFB803] rounded-full mb-6 shadow-lg">
-              <Sparkles className="w-8 h-8 text-white" />
+          <div className="text-center mb-10 animate-fade-in-up">
+            <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-[#0B7186] to-[#054653] rounded-2xl mb-5 shadow-lg shadow-[#0B7186]/20">
+              <Sparkles className="w-7 h-7 text-white" />
             </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-[#0B7186] via-[#054653] to-[#0B7186] bg-clip-text text-transparent mb-4">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-gray-900 mb-3">
               {conference?.title || "REC25 & EXPO"}
             </h1>
-            <p className="text-xl sm:text-2xl text-gray-700 mb-2">
-              {conference?.title || "Renewable Energy Conference 2025"}
-            </p>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Join the future of sustainable energy. Register now for the most anticipated renewable energy event of
-              2025.
+            <p className="text-gray-500 max-w-lg mx-auto">
+              Register now for the most anticipated renewable energy event.
             </p>
           </div>
 
-          {/* Progress Steps */}
-          <div className="mb-12">
+          <div className="mb-10">
             <div className="flex justify-center">
-              <div className="flex items-center space-x-4 sm:space-x-8">
+              <div className="flex items-center space-x-3 sm:space-x-6">
                 {steps.map((step, index) => {
                   const Icon = step.icon
                   const isActive = currentStep >= step.number
@@ -803,36 +804,35 @@ export default function RegistrationForm() {
                       <div className="flex flex-col items-center">
                         <div
                           className={`
-                          relative w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all duration-500 transform
+                          relative w-11 h-11 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all duration-500
                           ${
                             isActive
-                              ? "bg-gradient-to-r from-[#0B7186] to-[#FFB803] shadow-lg shadow-[#0B7186]/25 scale-110"
-                              : "bg-white border-2 border-gray-300 shadow-md"
+                              ? "bg-[#0B7186] shadow-lg shadow-[#0B7186]/25"
+                              : "bg-white border border-gray-200 shadow-sm"
                           }
-                          ${isCurrent ? "ring-4 ring-[#FFB803]/30" : ""}
+                          ${isCurrent ? "ring-4 ring-[#0B7186]/15 scale-105" : ""}
                         `}
                         >
-                          <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${isActive ? "text-white" : "text-gray-500"}`} />
-                          {isActive && currentStep > step.number && (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                            </div>
+                          {isActive && currentStep > step.number ? (
+                            <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                          ) : (
+                            <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${isActive ? "text-white" : "text-gray-400"}`} />
                           )}
                         </div>
                         <div className="mt-2 text-center">
                           <p
-                            className={`text-sm sm:text-base font-medium ${isActive ? "text-[#0B7186]" : "text-gray-500"}`}
+                            className={`text-xs sm:text-sm font-semibold ${isActive ? "text-[#0B7186]" : "text-gray-400"}`}
                           >
                             {step.title}
                           </p>
-                          <p className="text-xs text-gray-400 hidden sm:block">{step.description}</p>
+                          <p className="text-[10px] text-gray-400 hidden sm:block">{step.description}</p>
                         </div>
                       </div>
                       {index < steps.length - 1 && (
                         <div
                           className={`
-                          w-8 sm:w-16 h-0.5 mx-4 transition-all duration-500
-                          ${currentStep > step.number ? "bg-gradient-to-r from-[#0B7186] to-[#FFB803]" : "bg-gray-600"}
+                          w-6 sm:w-12 h-0.5 mx-2 sm:mx-3 rounded-full transition-all duration-500
+                          ${currentStep > step.number ? "bg-[#0B7186]" : "bg-gray-200"}
                         `}
                         />
                       )}
@@ -856,7 +856,7 @@ export default function RegistrationForm() {
           {/* Step 1: Registration Type Selection */}
           {currentStep === 1 && (
             <div className="animate-in slide-in-from-right duration-500">
-              <Card className="bg-white/95 backdrop-blur-sm border-gray-200 shadow-xl">
+              <Card className="bg-white border border-gray-100 shadow-lg shadow-gray-200/50 rounded-2xl">
                 <CardHeader className="text-center pb-8">
                   <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-r from-[#0B7186] to-[#FFB803] rounded-full mb-4 mx-auto">
                     <User className="w-6 h-6 text-white" />

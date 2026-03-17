@@ -5,9 +5,9 @@ set -euo pipefail
 # Config (edit if you need)
 #############################################
 APP="rec-portal"
-DIR="/srv/rec-registration"
+DIR="/home/admin/apps/rec-registration"
 BRANCH="${1:-main}"          # optionally pass branch: ./deploy.sh dev
-PORT="${PORT:-3001}"         # keep in sync with ecosystem.config.js
+PORT="${PORT:-3002}"         # keep in sync with ecosystem.config.js
 LOGFILE="${DIR}/deploy.log"
 
 #############################################

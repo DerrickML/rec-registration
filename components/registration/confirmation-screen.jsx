@@ -4,7 +4,25 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle, Calendar, Users, Sparkles, ArrowRight, Mail, MapPin } from "lucide-react"
 
-export default function ConfirmationScreen({ onRegisterAnother }) {
+export default function ConfirmationScreen({ onRegisterAnother, conference }) {
+  const formatDateRange = (startDate, endDate) => {
+    if (!startDate || !endDate) return "TBD"
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    const options = { month: "long", day: "numeric", year: "numeric" }
+    if (start.getMonth() === end.getMonth()) {
+      return `${start.toLocaleDateString("en-US", { month: "long" })} ${start.getDate()}-${end.getDate()}, ${start.getFullYear()}`
+    }
+    return `${start.toLocaleDateString("en-US", options)} - ${end.toLocaleDateString("en-US", options)}`
+  }
+
+  const eventDates = conference
+    ? formatDateRange(conference.startDate, conference.endDate)
+    : "October 20-22, 2025"
+  const eventVenue = conference?.venue
+    ? `${conference.venue}, ${conference.location || ""}`
+    : "Kampala Serena Hotel, Uganda"
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
       {/* Animated background elements */}
@@ -91,13 +109,13 @@ export default function ConfirmationScreen({ onRegisterAnother }) {
                     <div className="flex items-center justify-center space-x-2">
                       <Calendar className="w-5 h-5 text-[#0B7186]" />
                       <span>
-                        <strong className="text-gray-800">Dates:</strong> October 20-22, 2025
+                        <strong className="text-gray-800">Dates:</strong> {eventDates}
                       </span>
                     </div>
                     <div className="flex items-center justify-center space-x-2">
                       <MapPin className="w-5 h-5 text-[#0B7186]" />
                       <span>
-                        <strong className="text-gray-800">Venue:</strong> Kampala Serena Hotel, Uganda
+                        <strong className="text-gray-800">Venue:</strong> {eventVenue}
                       </span>
                     </div>
                   </div>

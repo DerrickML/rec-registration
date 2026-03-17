@@ -128,6 +128,17 @@ export default function RegistrationForm() {
     fetchConference()
   }, [])
 
+  // Update eventStart/eventEnd when conference data is available
+  useEffect(() => {
+    if (conference) {
+      setFormData((prev) => ({
+        ...prev,
+        eventStart: conference.startDate || prev.eventStart,
+        eventEnd: conference.endDate || prev.eventEnd,
+      }))
+    }
+  }, [conference])
+
   useEffect(() => {
     const checkCapacity = async () => {
       if (registrationType === "Exhibitor") {
@@ -153,16 +164,6 @@ export default function RegistrationForm() {
     setRegistrationType("Attendee")
     setExhibitorCapacity(null)
     setExhibitorMembers([
-      {
-        title: "",
-        firstName: "",
-        lastName: "",
-        otherName: "",
-        email: "",
-        otherEmail: "",
-        phone: "",
-        otherPhone: "",
-      },
       {
         title: "",
         firstName: "",
@@ -426,7 +427,7 @@ export default function RegistrationForm() {
 
   // Remove exhibitor member
   const removeExhibitorMember = (index) => {
-    if (exhibitorMembers.length > 2) {
+    if (exhibitorMembers.length > 1) {
       setExhibitorMembers(exhibitorMembers.filter((_, i) => i !== index))
     }
   }
@@ -733,7 +734,7 @@ export default function RegistrationForm() {
   }
 
   if (success) {
-    return <ConfirmationScreen onRegisterAnother={resetForm} />
+    return <ConfirmationScreen onRegisterAnother={resetForm} conference={conference} />
   }
 
   const steps = [
@@ -1412,7 +1413,7 @@ export default function RegistrationForm() {
                               label="Other Phone"
                               placeholder="Enter alternate phone number"
                               id="otherPhone"
-                              className="h-12 bg-red border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                              className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
                             />
                           </div>
                         </div>

@@ -10,7 +10,9 @@ package-lock.json
 
 # production
 /build
+deploy.sh
 deploy.log
+ecosystem.config.js
 
 # debug
 npm-debug.log*

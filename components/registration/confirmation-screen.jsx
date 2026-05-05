@@ -18,10 +18,10 @@ export default function ConfirmationScreen({ onRegisterAnother, conference }) {
 
   const eventDates = conference
     ? formatDateRange(conference.startDate, conference.endDate)
-    : "October 20-22, 2025"
+    : "Dates TBD"
   const eventVenue = conference?.venue
     ? `${conference.venue}, ${conference.location || ""}`
-    : "Kampala Serena Hotel, Uganda"
+    : "Venue TBD"
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
@@ -44,7 +44,7 @@ export default function ConfirmationScreen({ onRegisterAnother, conference }) {
                   Registration Successful!
                 </CardTitle>
                 <CardDescription className="text-xl text-gray-600">
-                  Welcome to REC25 & EXPO - Your journey to the future of renewable energy begins now!
+                  {conference?.successMessage || `Welcome to ${conference?.shortName || conference?.title || "the Conference"} - Your journey to the future of renewable energy begins now!`}
                 </CardDescription>
               </CardHeader>
 
@@ -137,7 +137,7 @@ export default function ConfirmationScreen({ onRegisterAnother, conference }) {
                   <p className="text-gray-400 text-sm">
                     Thank you for joining us in shaping the future of renewable energy.
                     <br className="hidden sm:block" />
-                    See you at REC25 & EXPO!
+                    See you at {conference?.shortName || conference?.title || "the Conference"}!
                   </p>
                 </div>
               </CardContent>

@@ -81,9 +81,11 @@ export default function RegistrationForm() {
     // },
   ])
 
+  const currentYear = new Date().getFullYear()
+
   const [formData, setFormData] = useState({
     email: "",
-    conferenceYears: [2025],
+    conferenceYears: [currentYear],
     title: "",
     firstName: "",
     lastName: "",
@@ -100,8 +102,8 @@ export default function RegistrationForm() {
     visaLetterRequired: false,
     additionalComments: "",
     daysAttending: [],
-    eventStart: "2025-10-20T09:00:00Z",
-    eventEnd: "2025-10-22T18:00:00Z",
+    eventStart: "",
+    eventEnd: "",
     passportNumber: "",
     visaLetterSent: false,
     exhibitionDetails: "",
@@ -115,7 +117,7 @@ export default function RegistrationForm() {
         setConference(activeConference)
 
         // Check registration status
-        if (!activeConference.registrationStatus) {
+        if (!activeConference.registrationOpen) {
           setRegistrationClosed(true)
         }
       } catch (err) {
@@ -175,9 +177,12 @@ export default function RegistrationForm() {
         otherPhone: "",
       },
     ])
+    const resetYear = conference?.startDate
+      ? new Date(conference.startDate).getFullYear()
+      : currentYear
     setFormData({
       email: "",
-      conferenceYears: [2025],
+      conferenceYears: [resetYear],
       title: "",
       firstName: "",
       lastName: "",
@@ -194,8 +199,8 @@ export default function RegistrationForm() {
       visaLetterRequired: false,
       additionalComments: "",
       daysAttending: [],
-      eventStart: "2025-10-20T09:00:00Z",
-      eventEnd: "2025-10-22T18:00:00Z",
+      eventStart: conference?.startDate || "",
+      eventEnd: conference?.endDate || "",
       passportNumber: "",
       visaLetterSent: false,
       exhibitionDetails: "",
@@ -351,11 +356,16 @@ export default function RegistrationForm() {
         // New user, proceed to step 3 (coupon) or step 4 (registration details)
         setFormData((prev) => ({ ...prev, email, registrationType }))
 
+        // Pre-fill first exhibitor member email with the validated email
         if (registrationType === "Exhibitor") {
-          setCurrentStep(3) // Go to coupon step for exhibitors
-        } else {
-          setCurrentStep(3) // Go to coupon step for all types
+          setExhibitorMembers((prev) => {
+            const updated = [...prev]
+            updated[0] = { ...updated[0], email }
+            return updated
+          })
         }
+
+        setCurrentStep(3) // Go to coupon step for all types
       }
     } catch (err) {
       setError(err.message)
@@ -616,117 +626,54 @@ export default function RegistrationForm() {
   // Registration closed screen
   if (registrationClosed) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
-        {/* Animated background elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#FFB803] rounded-full mix-blend-multiply filter blur-xl opacity-5 animate-pulse"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[#0B7186] rounded-full mix-blend-multiply filter blur-xl opacity-5 animate-pulse animation-delay-2000"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#054653] rounded-full mix-blend-multiply filter blur-xl opacity-3 animate-pulse animation-delay-4000"></div>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30 flex items-center justify-center p-4">
+        <div className="max-w-md w-full text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center mx-auto mb-6 shadow-lg">
+            <AlertCircle className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">Registration Closed</h2>
+          <p className="text-gray-500 mb-8">
+            {conference?.regClosedMessage || "The registration period has ended and we are no longer accepting new registrations at this time."}
+          </p>
+          
+          <div className="space-y-4">
+            <Button
+              onClick={() => (window.location.href = "/")}
+              className="bg-[#0B7186] hover:bg-[#054653] text-white px-6 h-11 font-semibold rounded-xl shadow-md w-full"
+            >
+              Back to Home
+            </Button>
+            <Button
+              onClick={() => (window.location.href = "/program")}
+              variant="outline"
+              className="border-2 border-[#0B7186] text-[#0B7186] hover:bg-[#0B7186] hover:text-white px-6 h-11 font-semibold rounded-xl w-full"
+            >
+              View Program
+            </Button>
+          </div>
 
-        <div className="relative z-10 min-h-screen py-8 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
-          <div className="max-w-2xl w-full">
-            <Card className="bg-white/95 backdrop-blur-sm border-gray-200 shadow-2xl overflow-hidden">
-              <CardHeader className="text-center border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white pb-8 pt-12">
-                <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-red-500 to-red-600 rounded-full mb-6 mx-auto shadow-lg">
-                  <AlertCircle className="w-10 h-10 text-white" />
-                </div>
-                <CardTitle className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-                  Registration Closed
-                </CardTitle>
-                <CardDescription className="text-lg text-gray-600">
-                  {conference?.title || "Conference"} Registration
-                </CardDescription>
-              </CardHeader>
-
-              <CardContent className="pt-8 pb-10">
-                <div className="space-y-6">
-                  {/* Main Message */}
-                  <div className="text-center space-y-3">
-                    <p className="text-lg text-gray-700 font-medium">
-                      We're sorry, but registration for this conference is currently closed.
-                    </p>
-                    <p className="text-gray-600">
-                      The registration period has ended and we are no longer accepting new registrations at this time.
-                    </p>
-                  </div>
-
-                  {/* Conference Details */}
-                  {conference && (
-                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-6 space-y-3 border border-gray-200">
-                      <h3 className="font-semibold text-gray-900 text-lg mb-4">Conference Details</h3>
-                      <div className="space-y-2">
-                        <div className="flex items-start space-x-3">
-                          <Calendar className="w-5 h-5 text-[#0B7186] mt-0.5 flex-shrink-0" />
-                          <div>
-                            <p className="text-sm font-medium text-gray-700">Date</p>
-                            <p className="text-sm text-gray-600">
-                              {new Date(conference.startDate).toLocaleDateString("en-US", {
-                                weekday: "long",
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric",
-                              })}{" "}
-                              -{" "}
-                              {new Date(conference.endDate).toLocaleDateString("en-US", {
-                                weekday: "long",
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric",
-                              })}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-start space-x-3">
-                          <MapPin className="w-5 h-5 text-[#0B7186] mt-0.5 flex-shrink-0" />
-                          <div>
-                            <p className="text-sm font-medium text-gray-700">Location</p>
-                            <p className="text-sm text-gray-600">{conference.location}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start space-x-3">
-                          <Building className="w-5 h-5 text-[#0B7186] mt-0.5 flex-shrink-0" />
-                          <div>
-                            <p className="text-sm font-medium text-gray-700">Venue</p>
-                            <p className="text-sm text-gray-600">{conference.venue}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <p className="text-sm text-gray-500">
+              Need assistance?{" "}
+              {conference?.contactEmail || conference?.contactPhone ? (
+                <>
+                  Contact us at{" "}
+                  {conference.contactEmail && (
+                    <a href={`mailto:${conference.contactEmail}`} className="text-[#0B7186] hover:underline font-medium">
+                      {conference.contactEmail}
+                    </a>
                   )}
-
-                  {/* Alternative Actions */}
-                  <div className="space-y-4 pt-4">
-                    <h3 className="font-semibold text-gray-900 text-center">What you can do</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Button
-                        onClick={() => (window.location.href = "/program")}
-                        className="h-12 bg-gradient-to-r from-[#0B7186] to-[#054653] hover:from-[#054653] hover:to-[#0B7186] text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-                      >
-                        <Calendar className="mr-2 h-5 w-5" />
-                        View Program
-                      </Button>
-                      <Button
-                        onClick={() => (window.location.href = "/")}
-                        variant="outline"
-                        className="h-12 border-2 border-[#0B7186] text-[#0B7186] hover:bg-[#0B7186] hover:text-white font-semibold shadow-md hover:shadow-lg transition-all duration-300"
-                      >
-                        <Building className="mr-2 h-5 w-5" />
-                        Back to Home
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Contact Information */}
-                  <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-gray-700 text-center">
-                      <span className="font-semibold">Need assistance?</span> Please contact the conference organizers
-                      for more information about registration status or future events.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                  {conference.contactEmail && conference.contactPhone && " or "}
+                  {conference.contactPhone && (
+                    <a href={`tel:${conference.contactPhone}`} className="text-[#0B7186] hover:underline font-medium">
+                      {conference.contactPhone}
+                    </a>
+                  )}
+                </>
+              ) : (
+                "Please contact the conference organizers."
+              )}
+            </p>
           </div>
         </div>
       </div>
@@ -848,7 +795,7 @@ export default function RegistrationForm() {
             <div className="mb-8 animate-in slide-in-from-top duration-300">
               <Alert className="border-red-500/50 bg-red-500/10 backdrop-blur-sm">
                 <AlertCircle className="h-4 w-4 text-red-400" />
-                <AlertDescription className="text-red-300 whitespace-pre-line">{error}</AlertDescription>
+                <AlertDescription className="text-red-600 whitespace-pre-line">{error}</AlertDescription>
               </Alert>
             </div>
           )}
@@ -878,7 +825,7 @@ export default function RegistrationForm() {
                             <div
                               key={type}
                               className={`
-                                relative p- rounded-lg border-2 cursor-pointer transition-all
+                                relative p-6 rounded-lg border-2 cursor-pointer transition-all
                                 ${
                                   registrationType === type
                                     ? "border-[#0B7186] bg-[#0B7186]/10"

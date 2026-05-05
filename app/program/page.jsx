@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -16,7 +17,8 @@ import {
   getFilteredSessions,
   groupSessionsByTimeSlot,
 } from "../../lib/program-utils"
-import ProgramHeader from "../../components/program/program-header"
+import Navbar from "@/components/layout/navbar"
+import Footer from "@/components/layout/footer"
 import ProgramStats from "../../components/program/program-stats"
 import DayTab from "../../components/program/day-tab"
 import TimeSlotAccordion from "../../components/program/time-slot-accordion"
@@ -97,17 +99,18 @@ export default function ProgramPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center p-4">
-        <div className="max-w-md w-full">
-          <Alert className="border-red-500/50 bg-red-500/10">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-          <div className="mt-4 text-center">
-            <Button className="bg-gradient-to-r from-[#0B7186] to-[#FFB803] hover:from-[#054653] hover:to-[#FFB803] text-white">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30 flex items-center justify-center p-4">
+        <div className="max-w-md w-full text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#0B7186] to-[#054653] flex items-center justify-center mx-auto mb-6">
+            <AlertCircle className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">Program Not Available</h2>
+          <p className="text-gray-500 mb-8">{error}</p>
+          <Link href="/">
+            <Button className="bg-[#0B7186] hover:bg-[#054653] text-white px-6 h-11 font-semibold rounded-xl shadow-md">
               Back to Home
             </Button>
-          </div>
+          </Link>
         </div>
       </div>
     )
@@ -135,7 +138,7 @@ export default function ProgramPage() {
 
       <div className="relative z-10">
         {/* Header */}
-        <ProgramHeader conferenceTitle={conference?.title} />
+        <Navbar conference={conference} />
 
         {/* Hero Section */}
         <section className="py-12 px-4 sm:px-6 lg:px-8">
@@ -265,13 +268,9 @@ export default function ProgramPage() {
         </section>
 
         {/* Footer */}
-        <footer className="bg-gray-900 text-white py-10 px-4 sm:px-6 lg:px-8 mt-16">
-          <div className="max-w-7xl mx-auto text-center">
-            <p className="text-gray-500 text-sm">
-              © {new Date().getFullYear()} National Renewable Energy Platform (NREP). All rights reserved.
-            </p>
-          </div>
-        </footer>
+        <div className="mt-16">
+          <Footer conference={conference} />
+        </div>
       </div>
     </div>
   )

@@ -67,7 +67,7 @@ export default function EmbeddedProgramPage() {
   const toggleTimeSlot = (timeKey) => {
     setExpandedTimeSlots((prev) => ({
       ...prev,
-      [timeKey]: !prev[timeKey],
+      [timeKey]: prev[timeKey] === false,
     }))
   }
 

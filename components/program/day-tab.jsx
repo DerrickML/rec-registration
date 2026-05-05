@@ -6,27 +6,24 @@ export default function DayTab({ day, dayDate, sessionCount, isActive, onClick }
   return (
     <button
       onClick={onClick}
+      type="button"
       className={`
-        relative group rounded-2xl border-2 transition-all duration-300 overflow-hidden
+        group relative overflow-hidden rounded-lg border text-left transition-all duration-200
         ${
           isActive
-            ? "border-[#0B7186] bg-gradient-to-br from-[#0B7186] to-[#FFB803] shadow-lg scale-[1.02]"
-            : "border-gray-200 bg-white hover:border-[#0B7186]/30 hover:shadow-md hover:scale-[1.01]"
+            ? "border-[#0B7186] bg-[#0B7186] shadow-sm"
+            : "border-gray-200 bg-white hover:border-[#0B7186]/30 hover:shadow-sm"
         }
       `}
+      aria-pressed={isActive}
     >
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white to-transparent" />
-      </div>
-
       {/* Content */}
-      <div className="relative px-4 py-6 flex flex-col items-center justify-center gap-2 min-h-[120px]">
+      <div className="relative flex min-h-[104px] flex-col justify-between gap-3 px-4 py-4">
         <Calendar
-          className={`w-8 h-8 mb-1 transition-transform duration-300 ${isActive ? "text-white scale-110" : "text-[#0B7186] group-hover:scale-110"}`}
+          className={`h-5 w-5 transition-transform duration-200 ${isActive ? "text-white" : "text-[#0B7186] group-hover:scale-105"}`}
         />
-        <div className="flex flex-col items-center gap-1">
-          <span className={`text-lg font-bold tracking-tight ${isActive ? "text-white" : "text-gray-900"}`}>
+        <div className="flex flex-col gap-1">
+          <span className={`text-base font-bold tracking-tight ${isActive ? "text-white" : "text-gray-950"}`}>
             Day {day}
           </span>
           {dayDate && (
@@ -35,10 +32,10 @@ export default function DayTab({ day, dayDate, sessionCount, isActive, onClick }
         </div>
         <div
           className={`
-            mt-1 px-3 py-1 rounded-full text-xs font-medium
+            w-fit rounded-md px-2.5 py-1 text-xs font-semibold
             ${
               isActive
-                ? "bg-white/20 text-white backdrop-blur-sm"
+                ? "bg-white/[0.15] text-white"
                 : "bg-gray-100 text-gray-700 group-hover:bg-[#0B7186]/10 group-hover:text-[#0B7186]"
             }
           `}
@@ -46,9 +43,6 @@ export default function DayTab({ day, dayDate, sessionCount, isActive, onClick }
           {sessionCount} {sessionCount === 1 ? "session" : "sessions"}
         </div>
       </div>
-
-      {/* Active Indicator */}
-      {isActive && <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/40" />}
     </button>
   )
 }

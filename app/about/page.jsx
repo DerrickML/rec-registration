@@ -6,8 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
   ArrowRight,
-  Loader2,
-  AlertCircle,
   Target,
   Users,
   Globe,
@@ -24,11 +22,11 @@ import {
   Sparkles,
   Clock,
 } from "lucide-react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { apiService } from "../../lib/api-service"
 import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
 import PageHero from "@/components/layout/page-hero"
+import { PageErrorState, PageLoadingState } from "@/components/layout/public-page-state"
 
 const OBJECTIVES = [
   {
@@ -113,26 +111,20 @@ export default function AboutPage() {
   }, [])
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center animate-fade-in-scale">
-          <Loader2 className="w-10 h-10 animate-spin text-[#0B7186] mx-auto mb-4" />
-          <p className="text-gray-500 font-medium">Loading...</p>
-        </div>
-      </div>
-    )
+    return <PageLoadingState message="Loading conference details..." />
   }
 
   if (error || !conference) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
-        <Alert className="max-w-md">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error || "No active conference found."}</AlertDescription>
-        </Alert>
-      </div>
+      <PageErrorState
+        title="Conference details unavailable"
+        message={error || "No active conference found."}
+      />
     )
   }
+
+  const editionNumber = conference.year ? conference.year - 2020 : null
+  const editionLabel = editionNumber ? `${editionNumber}${getSuffix(editionNumber)}` : ""
 
   return (
     <div className="min-h-screen bg-white">
@@ -141,65 +133,92 @@ export default function AboutPage() {
       {/* Hero */}
       <PageHero
         title={`About ${conference.shortName || conference.title || "the Conference"}`}
-        subtitle={`The ${conference.year ? conference.year - 2020 : ""}${conference.year ? getSuffix(conference.year - 2020) : ""} edition of the Annual Renewable Energy Conference & Expo`}
+        subtitle={
+          editionLabel
+            ? `The ${editionLabel} edition of the Annual Renewable Energy Conference & Expo`
+            : "The Annual Renewable Energy Conference & Expo"
+        }
         conference={conference}
         backgroundImage={conference.heroImageUrl}
       />
 
       {/* ─── Conference Theme ─── */}
-      <section className="py-20 sm:py-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <Badge className="mb-6 px-4 py-2 bg-[#0B7186]/8 text-[#0B7186] border border-[#0B7186]/15 text-sm font-medium rounded-full">
-              <Target className="w-3.5 h-3.5 mr-1.5" />
+      <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+        <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+          <div>
+            <Badge className="mb-5 rounded-md border border-[#0B7186]/[0.15] bg-[#0B7186]/[0.08] px-3 py-1.5 text-sm font-semibold text-[#0B7186]">
+              <Target className="mr-1.5 h-3.5 w-3.5" />
               Conference Theme
             </Badge>
             {conference.theme && (
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 mb-6 leading-tight">
+              <h2 className="mb-6 text-3xl font-extrabold leading-tight text-gray-950 sm:text-4xl lg:text-5xl">
                 {conference.theme}
               </h2>
             )}
+            <div className="space-y-5 text-base leading-8 text-gray-600 sm:text-lg">
+              <p>
+                The Ministry of Energy and Mineral Development, in partnership with the
+                National Renewable Energy Platform, will convene{" "}
+                <strong className="font-semibold text-gray-950">
+                  {conference.title || "Renewable Energy Conference & Expo"}
+                </strong>{" "}
+                as a practical forum for policy, investment, innovation, and sector
+                coordination.
+              </p>
+              <p>
+                The conference brings together experts, innovators, policymakers, financiers,
+                researchers, and practitioners to move clean energy conversations into
+                implementation.
+              </p>
+            </div>
           </div>
 
-          <div className="prose prose-lg max-w-none text-gray-600 leading-relaxed space-y-6">
-            <p>
-              The Ministry of Energy and Mineral Development, in partnership with the National
-              Renewable Energy Platform, is excited to announce the{" "}
-              <strong className="text-gray-900">
-                {conference.title || "Renewable Energy Conference & EXPO"}
-              </strong>{" "}
-              from{" "}
-              <strong className="text-gray-900">
-                {new Date(conference.startDate).toLocaleDateString("en-US", {
-                  day: "numeric",
-                  month: "long",
-                })}{" "}
-                to{" "}
-                {new Date(conference.endDate).toLocaleDateString("en-US", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
-              </strong>
-              , at the{" "}
-              <strong className="text-gray-900">
-                {conference.venue}, {conference.location}
-              </strong>
-              . This event will be a pivotal moment in our journey towards a sustainable
-              energy future.
-            </p>
-            <p>
-              Join us as we bring together experts, innovators, policymakers, and
-              stakeholders to discuss and advance the clean energy agenda. Your participation
-              is crucial to the success of this conference, and we look forward to your
-              invaluable contributions.
-            </p>
-          </div>
+          <aside className="rounded-lg border border-gray-200 bg-slate-50 p-5">
+            <h3 className="mb-4 text-sm font-bold uppercase tracking-wide text-gray-500">
+              Event Snapshot
+            </h3>
+            <dl className="space-y-4">
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Date
+                </dt>
+                <dd className="mt-1 text-sm font-semibold text-gray-950">
+                  {new Date(conference.startDate).toLocaleDateString("en-US", {
+                    day: "numeric",
+                    month: "long",
+                  })}{" "}
+                  to{" "}
+                  {new Date(conference.endDate).toLocaleDateString("en-US", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Venue
+                </dt>
+                <dd className="mt-1 text-sm font-semibold text-gray-950">
+                  {conference.venue || "Venue TBD"}
+                  {conference.location ? `, ${conference.location}` : ""}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Participation
+                </dt>
+                <dd className="mt-1 text-sm font-semibold text-gray-950">
+                  {(conference.maxAttendees || 1000).toLocaleString()}+ expected attendees
+                </dd>
+              </div>
+            </dl>
+          </aside>
         </div>
       </section>
 
       {/* ─── Key Highlights ─── */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-50/80 to-white">
+      <section className="bg-slate-50 px-4 py-20 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
@@ -239,11 +258,11 @@ export default function AboutPage() {
             ].map((item) => (
               <div
                 key={item.title}
-                className="group relative p-8 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden"
+                className="group relative overflow-hidden rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all duration-300 hover:border-[#0B7186]/25 hover:shadow-lg"
               >
                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#0B7186] to-[#FFB803] opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div
-                  className={`w-14 h-14 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center mb-5 shadow-lg`}
+                  className={`mb-5 flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br ${item.color} shadow-sm`}
                 >
                   <item.icon className="w-7 h-7 text-white" />
                 </div>
@@ -275,12 +294,12 @@ export default function AboutPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {OBJECTIVES.map((obj, index) => (
+            {OBJECTIVES.map((obj) => (
               <div
                 key={obj.title}
-                className="group flex items-start space-x-4 p-5 rounded-xl bg-white border border-gray-100 hover:border-[#0B7186]/20 hover:shadow-md transition-all duration-200"
+                className="group flex items-start space-x-4 rounded-lg border border-gray-200 bg-white p-5 transition-all duration-200 hover:border-[#0B7186]/25 hover:shadow-sm"
               >
-                <div className="w-10 h-10 rounded-lg bg-[#0B7186]/8 flex items-center justify-center flex-shrink-0 group-hover:bg-[#0B7186]/15 transition-colors">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#0B7186]/[0.08] transition-colors group-hover:bg-[#0B7186]/[0.15]">
                   <obj.icon className="w-5 h-5 text-[#0B7186]" />
                 </div>
                 <div>
@@ -298,9 +317,9 @@ export default function AboutPage() {
       </section>
 
       {/* ─── Exhibition Section ─── */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50/80">
-        <div className="max-w-4xl mx-auto text-center">
-          <Badge className="mb-6 px-4 py-2 bg-[#FFB803]/10 text-[#FFB803] border border-[#FFB803]/20 text-sm font-medium rounded-full">
+      <section className="bg-slate-50 px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-5xl rounded-lg border border-gray-200 bg-white p-6 text-center shadow-sm sm:p-10">
+          <Badge className="mb-6 rounded-md border border-[#FFB803]/20 bg-[#FFB803]/10 px-3 py-1.5 text-sm font-semibold text-[#8A6200]">
             <Sparkles className="w-3.5 h-3.5 mr-1.5" />
             Exhibition & EXPO
           </Badge>
@@ -331,7 +350,7 @@ export default function AboutPage() {
               <Link href="/register">
                 <Button
                   variant="outline"
-                  className="border-[#0B7186]/20 text-[#0B7186] hover:bg-[#0B7186]/5 rounded-xl px-6"
+                  className="rounded-lg border-[#0B7186]/20 px-6 text-[#0B7186] hover:bg-[#0B7186]/5"
                 >
                   Register as Exhibitor
                   <ArrowRight className="ml-2 w-4 h-4" />
@@ -340,7 +359,7 @@ export default function AboutPage() {
             ) : (
               <Badge
                 variant="secondary"
-                className="px-5 py-2.5 text-sm bg-gray-100 text-gray-500 border border-gray-200 rounded-xl"
+                className="rounded-lg border border-gray-200 bg-gray-100 px-5 py-2.5 text-sm text-gray-500"
               >
                 <Clock className="w-4 h-4 mr-2" />
                 Registration Opening Soon

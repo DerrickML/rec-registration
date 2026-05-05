@@ -58,8 +58,20 @@ export default function Footer({ conference }) {
   })()
   const socials = parsedSocialsJson.socials || {}
 
+  const eventDate =
+    conference.startDate && conference.endDate
+      ? `${new Date(conference.startDate).toLocaleDateString("en-US", {
+          month: "long",
+          day: "numeric",
+        })} - ${new Date(conference.endDate).toLocaleDateString("en-US", {
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        })}`
+      : ""
+
   return (
-    <footer className="bg-gray-950 text-white">
+    <footer className="bg-[#082f39] text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-12">
           {/* Column 1: Brand */}
@@ -69,17 +81,17 @@ export default function Footer({ conference }) {
                 <img
                   src={conference.logoUrl}
                   alt={conference.shortName || "Logo"}
-                  className="w-10 h-10 rounded-xl object-contain"
+                  className="w-10 h-10 rounded-lg object-contain"
                 />
               ) : (
-                <div className="w-10 h-10 bg-gradient-to-br from-[#0B7186] to-[#FFB803] rounded-xl flex items-center justify-center">
+                <div className="w-10 h-10 bg-[#0B7186] rounded-lg flex items-center justify-center">
                   <Sparkles className="w-5 h-5 text-white" />
                 </div>
               )}
               <h3 className="text-lg font-bold">{conference.shortName || "NREP"}</h3>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed mb-6">
-              {conference.fullName || "National Renewable Energy Platform"} —
+              {conference.fullName || "National Renewable Energy Platform"} -
               Leading Uganda's transition to sustainable energy through dialogue,
               innovation, and partnership.
             </p>
@@ -92,7 +104,7 @@ export default function Footer({ conference }) {
                     href={socials.facebook}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-9 h-9 rounded-lg bg-white/5 hover:bg-[#0B7186]/20 flex items-center justify-center text-gray-400 hover:text-white transition-all duration-200"
+                    className="w-9 h-9 rounded-lg bg-white/[0.07] hover:bg-white/[0.12] flex items-center justify-center text-gray-300 hover:text-white transition-all duration-200"
                     aria-label="Facebook"
                   >
                     <FacebookIcon className="w-4 h-4" />
@@ -103,7 +115,7 @@ export default function Footer({ conference }) {
                     href={socials.twitter}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-9 h-9 rounded-lg bg-white/5 hover:bg-[#0B7186]/20 flex items-center justify-center text-gray-400 hover:text-white transition-all duration-200"
+                    className="w-9 h-9 rounded-lg bg-white/[0.07] hover:bg-white/[0.12] flex items-center justify-center text-gray-300 hover:text-white transition-all duration-200"
                     aria-label="Twitter / X"
                   >
                     <TwitterIcon className="w-4 h-4" />
@@ -114,7 +126,7 @@ export default function Footer({ conference }) {
                     href={socials.linkedin}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-9 h-9 rounded-lg bg-white/5 hover:bg-[#0B7186]/20 flex items-center justify-center text-gray-400 hover:text-white transition-all duration-200"
+                    className="w-9 h-9 rounded-lg bg-white/[0.07] hover:bg-white/[0.12] flex items-center justify-center text-gray-300 hover:text-white transition-all duration-200"
                     aria-label="LinkedIn"
                   >
                     <LinkedInIcon className="w-4 h-4" />
@@ -125,7 +137,7 @@ export default function Footer({ conference }) {
                     href={socials.instagram}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-9 h-9 rounded-lg bg-white/5 hover:bg-[#0B7186]/20 flex items-center justify-center text-gray-400 hover:text-white transition-all duration-200"
+                    className="w-9 h-9 rounded-lg bg-white/[0.07] hover:bg-white/[0.12] flex items-center justify-center text-gray-300 hover:text-white transition-all duration-200"
                     aria-label="Instagram"
                   >
                     <InstagramIcon className="w-4 h-4" />
@@ -205,7 +217,7 @@ export default function Footer({ conference }) {
                   <div className="w-8 h-8 rounded-lg bg-white/5 group-hover:bg-[#0B7186]/20 flex items-center justify-center flex-shrink-0 transition-colors">
                     <Mail className="w-4 h-4" />
                   </div>
-                  <span>{conference.contactEmail}</span>
+                  <span className="break-all">{conference.contactEmail}</span>
                 </a>
               )}
               {conference.contactPhone && (
@@ -243,7 +255,7 @@ export default function Footer({ conference }) {
                 rel="noopener noreferrer"
                 className="flex items-center space-x-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors group"
               >
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-600 to-green-800 flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-green-700 flex items-center justify-center flex-shrink-0">
                   <Globe className="w-4 h-4 text-white" />
                 </div>
                 <div>
@@ -259,7 +271,7 @@ export default function Footer({ conference }) {
                 rel="noopener noreferrer"
                 className="flex items-center space-x-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors group"
               >
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0B7186] to-[#054653] flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-[#0B7186] flex items-center justify-center flex-shrink-0">
                   <Sparkles className="w-4 h-4 text-white" />
                 </div>
                 <div>
@@ -276,27 +288,18 @@ export default function Footer({ conference }) {
         </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="border-t border-white/10 mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-gray-500 text-sm">
             © {new Date().getFullYear()}{" "}
             {conference?.fullName || "National Renewable Energy Platform (NREP)"}. All
             rights reserved.
           </p>
-          <div className="flex items-center space-x-2 text-xs text-gray-600">
-            <Calendar className="w-3.5 h-3.5" />
-            <span>
-              {new Date(conference.startDate).toLocaleDateString("en-US", {
-                month: "long",
-                day: "numeric",
-              })}{" "}
-              -{" "}
-              {new Date(conference.endDate).toLocaleDateString("en-US", {
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </span>
-          </div>
+          {eventDate && (
+            <div className="flex items-center space-x-2 text-xs text-gray-500">
+              <Calendar className="w-3.5 h-3.5" />
+              <span>{eventDate}</span>
+            </div>
+          )}
         </div>
       </div>
     </footer>

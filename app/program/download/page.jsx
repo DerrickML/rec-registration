@@ -1,12 +1,25 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Download, Loader2, AlertCircle, FileText, Calendar, Users, Clock } from "lucide-react"
-import { apiService } from "../../../lib/api-service"
-import { generateProgramPDF } from "../../../lib/pdf-generator"
+import {
+  ArrowRight,
+  Building,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Download,
+  FileText,
+  Loader2,
+  MapPin,
+} from "lucide-react"
+import { apiService } from "@/lib/api-service"
+import { generateProgramPDF } from "@/lib/pdf-generator"
 import { useToast } from "@/hooks/use-toast"
+import Navbar from "@/components/layout/navbar"
+import Footer from "@/components/layout/footer"
+import { PageErrorState, PageLoadingState } from "@/components/layout/public-page-state"
 
 export default function DownloadProgramPage() {
   const [conference, setConference] = useState(null)
@@ -20,20 +33,16 @@ export default function DownloadProgramPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch active conference
         const activeConference = await apiService.getActiveConference()
         if (!activeConference) {
           setError("No active conference found")
-          setLoading(false)
           return
         }
         setConference(activeConference)
 
-        // Fetch program and sessions
         const programData = await apiService.getConferenceProgramWithSessions(activeConference.$id)
         if (!programData) {
           setError("No published program available for this conference")
-          setLoading(false)
           return
         }
 
@@ -54,13 +63,13 @@ export default function DownloadProgramPage() {
       setIsDownloading(true)
       const result = await generateProgramPDF(conference, program, sessions)
       toast({
-        title: "Success!",
-        description: `Program downloaded as ${result.filename}`,
+        title: "Program downloaded",
+        description: `Saved as ${result.filename}`,
       })
-    } catch (error) {
-      console.error("Error generating PDF:", error)
+    } catch (downloadError) {
+      console.error("Error generating PDF:", downloadError)
       toast({
-        title: "Error",
+        title: "Download failed",
         description: "Failed to generate PDF. Please try again.",
         variant: "destructive",
       })
@@ -70,168 +79,128 @@ export default function DownloadProgramPage() {
   }
 
   if (loading) {
+    return <PageLoadingState message="Loading conference program..." />
+  }
+
+  if (error || !conference || !program) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-[#0B7186] mx-auto mb-4" />
-          <p className="text-gray-600">Loading conference program...</p>
-        </div>
-      </div>
+      <PageErrorState
+        title="Program not available"
+        message={error || "No published program is available yet."}
+      />
     )
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-              <p className="text-gray-600 mb-4">{error}</p>
-              <Button
-                onClick={() => (window.location.href = "/")}
-                className="bg-gradient-to-r from-[#0B7186] to-[#FFB803] hover:from-[#054653] hover:to-[#FFB803] text-white"
-              >
-                Back to Home
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
+  const dateRange =
+    conference.startDate && conference.endDate
+      ? `${new Date(conference.startDate).toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+        })} to ${new Date(conference.endDate).toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        })}`
+      : "Conference dates to be confirmed"
+
+  const includedItems = [
+    "Complete session schedule organized by day",
+    "Session details, descriptions, and topics",
+    "Speaker information and session chairs",
+    "Venue halls and timing information",
+    "Professional formatting for easy reading",
+  ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#FFB803] rounded-full mix-blend-multiply filter blur-xl opacity-5 animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[#0B7186] rounded-full mix-blend-multiply filter blur-xl opacity-5 animate-pulse animation-delay-2000"></div>
-      </div>
+    <div className="min-h-screen bg-slate-50">
+      <Navbar conference={conference} />
 
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-        <Card className="max-w-2xl w-full bg-white/95 backdrop-blur-sm shadow-2xl">
-          <CardHeader className="text-center border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
-            <div className="flex justify-center mb-4">
-              <div className="w-20 h-20 bg-gradient-to-br from-[#0B7186] to-[#FFB803] rounded-full flex items-center justify-center">
-                <FileText className="w-10 h-10 text-white" />
+      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+          <section>
+            <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-lg bg-[#0B7186] text-white shadow-sm">
+              <FileText className="h-7 w-7" />
+            </div>
+            <h1 className="max-w-3xl text-3xl font-extrabold tracking-tight text-gray-950 sm:text-4xl lg:text-5xl">
+              Download the Conference Program
+            </h1>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-gray-600 sm:text-lg">
+              Get a PDF copy of the published schedule for planning, printing, and offline reference.
+            </p>
+
+            <div className="mt-8 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                <Calendar className="mb-3 h-5 w-5 text-[#0B7186]" />
+                <h2 className="text-sm font-bold text-gray-950">Date</h2>
+                <p className="mt-1 text-sm leading-6 text-gray-600">{dateRange}</p>
+              </div>
+              <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                <MapPin className="mb-3 h-5 w-5 text-[#0B7186]" />
+                <h2 className="text-sm font-bold text-gray-950">Location</h2>
+                <p className="mt-1 text-sm leading-6 text-gray-600">{conference.location}</p>
+                {conference.venue && (
+                  <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-500">
+                    <Building className="h-3.5 w-3.5" />
+                    {conference.venue}
+                  </p>
+                )}
+              </div>
+              <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:col-span-2">
+                <Clock className="mb-3 h-5 w-5 text-[#0B7186]" />
+                <h2 className="text-sm font-bold text-gray-950">Program Details</h2>
+                <p className="mt-1 text-sm leading-6 text-gray-600">
+                  {program.daysCount} {program.daysCount === 1 ? "day" : "days"} and{" "}
+                  {sessions.length} published {sessions.length === 1 ? "session" : "sessions"}.
+                </p>
               </div>
             </div>
-            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-[#0B7186] to-[#FFB803] bg-clip-text text-transparent">
-              Download Conference Program
-            </CardTitle>
-            <p className="text-gray-600 mt-2">Get the complete schedule as a PDF</p>
-          </CardHeader>
+          </section>
 
-          <CardContent className="pt-6 pb-8">
-            {/* Conference Info */}
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center">{conference?.title}</h2>
-
-              <div className="space-y-4">
-                <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
-                  <Calendar className="w-5 h-5 text-[#0B7186] mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-gray-900">Date</p>
-                    <p className="text-gray-600">
-                      {new Date(conference?.startDate).toLocaleDateString("en-US", {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}{" "}
-                      -{" "}
-                      {new Date(conference?.endDate).toLocaleDateString("en-US", {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
-                  <Users className="w-5 h-5 text-[#0B7186] mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-gray-900">Location</p>
-                    <p className="text-gray-600">{conference?.location}</p>
-                    <p className="text-gray-500 text-sm">{conference?.venue}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
-                  <Clock className="w-5 h-5 text-[#0B7186] mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-gray-900">Program Details</p>
-                    <p className="text-gray-600">
-                      {program?.daysCount} Days • {sessions.length} Sessions
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* What's Included */}
-            <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <h3 className="font-semibold text-gray-900 mb-2">What's included in the PDF:</h3>
-              <ul className="space-y-1 text-gray-700 text-sm">
-                <li className="flex items-start">
-                  <span className="text-[#0B7186] mr-2">✓</span>
-                  Complete session schedule organized by day
+          <aside className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+            <h2 className="text-lg font-bold text-gray-950">PDF includes</h2>
+            <ul className="mt-4 space-y-3">
+              {includedItems.map((item) => (
+                <li key={item} className="flex gap-3 text-sm leading-6 text-gray-700">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#0B7186]" />
+                  <span>{item}</span>
                 </li>
-                <li className="flex items-start">
-                  <span className="text-[#0B7186] mr-2">✓</span>
-                  All session details, descriptions, and topics
-                </li>
-                <li className="flex items-start">
-                  <span className="text-[#0B7186] mr-2">✓</span>
-                  Speaker information and session chairs
-                </li>
-                <li className="flex items-start">
-                  <span className="text-[#0B7186] mr-2">✓</span>
-                  Venue halls and timing information
-                </li>
-                <li className="flex items-start">
-                  <span className="text-[#0B7186] mr-2">✓</span>
-                  Professional formatting for easy reading
-                </li>
-              </ul>
-            </div>
+              ))}
+            </ul>
 
-            {/* Download Button */}
             <Button
               onClick={handleDownload}
               disabled={isDownloading}
-              className="w-full h-14 text-lg bg-gradient-to-r from-[#0B7186] to-[#FFB803] hover:from-[#054653] hover:to-[#FFB803] text-white shadow-lg hover:shadow-xl transition-all duration-300"
+              className="mt-6 h-12 w-full rounded-lg bg-[#0B7186] text-base font-semibold text-white shadow-sm hover:bg-[#054653]"
             >
               {isDownloading ? (
                 <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   Generating PDF...
                 </>
               ) : (
                 <>
-                  <Download className="w-5 h-5 mr-2" />
-                  Download Program (PDF)
+                  <Download className="mr-2 h-5 w-5" />
+                  Download PDF
                 </>
               )}
             </Button>
 
-            {/* Additional Links */}
-            <div className="mt-6 text-center space-y-2">
-              <p className="text-sm text-gray-500">Want to view online instead?</p>
+            <Link href="/program" className="mt-4 block">
               <Button
-                variant="link"
-                onClick={() => (window.location.href = "/program")}
-                className="text-[#0B7186] hover:text-[#054653]"
+                variant="outline"
+                className="h-11 w-full rounded-lg border-[#0B7186]/25 font-semibold text-[#0B7186] hover:bg-[#0B7186]/5"
               >
-                View Program Online →
+                View Program Online
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </Link>
+          </aside>
+        </div>
+      </main>
+
+      <Footer conference={conference} />
     </div>
   )
 }

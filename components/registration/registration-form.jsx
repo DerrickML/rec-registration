@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,11 +38,18 @@ import { CustomPhoneInput } from "./phone-input"
 const titles = ["Mr.", "Mrs.", "Ms.", "Dr.", "Eng.", "Rev.", "Prof."]
 const registrationTypes = ["Attendee", "Exhibitor"] //, "Sponsor"]
 
+function FieldError({ message }) {
+  if (!message) return null
+  return <p className="text-sm font-medium text-red-600">{message}</p>
+}
+
 export default function RegistrationForm() {
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [fieldErrors, setFieldErrors] = useState({})
   const [success, setSuccess] = useState(false)
+  const otpInputRef = useRef(null)
 
   // Form data
   const [email, setEmail] = useState("")
@@ -51,6 +58,7 @@ export default function RegistrationForm() {
   const [isEditing, setIsEditing] = useState(false)
   const [awaitingOtp, setAwaitingOtp] = useState(false)
   const [otpCode, setOtpCode] = useState("")
+  const [otpResendCooldown, setOtpResendCooldown] = useState(0)
   const [editToken, setEditToken] = useState("")
   const [emailVerificationMode, setEmailVerificationMode] = useState("new")
   const [registrationType, setRegistrationType] = useState("Attendee")
@@ -60,6 +68,7 @@ export default function RegistrationForm() {
   const [conference, setConference] = useState(null)
   const [registrationClosed, setRegistrationClosed] = useState(false)
   const [checkingStatus, setCheckingStatus] = useState(true)
+  const [submittedRegistration, setSubmittedRegistration] = useState(null)
 
   // Exhibitor members data
   const [exhibitorMembers, setExhibitorMembers] = useState([
@@ -172,6 +181,19 @@ export default function RegistrationForm() {
     checkCapacity()
   }, [registrationType])
 
+  useEffect(() => {
+    if (!awaitingOtp) return
+    otpInputRef.current?.focus()
+  }, [awaitingOtp])
+
+  useEffect(() => {
+    if (otpResendCooldown <= 0) return
+    const timer = window.setTimeout(() => {
+      setOtpResendCooldown((prev) => Math.max(0, prev - 1))
+    }, 1000)
+    return () => window.clearTimeout(timer)
+  }, [otpResendCooldown])
+
   const resetForm = () => {
     setCurrentStep(1)
     setEmail("")
@@ -180,6 +202,7 @@ export default function RegistrationForm() {
     setIsEditing(false)
     setAwaitingOtp(false)
     setOtpCode("")
+    setOtpResendCooldown(0)
     setEditToken("")
     setEmailVerificationMode("new")
     setRegistrationType("Attendee")
@@ -227,7 +250,9 @@ export default function RegistrationForm() {
       coupon: "",
     })
     setError("")
+    setFieldErrors({})
     setSuccess(false)
+    setSubmittedRegistration(null)
   }
 
   // Step 1: Registration Type Selection
@@ -257,6 +282,7 @@ export default function RegistrationForm() {
 
     setLoading(true)
     setError("")
+    setFieldErrors({})
 
     try {
       const response = await fetch("/api/registration/start", {
@@ -278,6 +304,7 @@ export default function RegistrationForm() {
         setCouponRequired(result.couponRequired === true)
         setFormData((prev) => ({ ...prev, email: result.email }))
         setEmail(result.email)
+        setOtpResendCooldown(60)
         setCurrentStep(3)
       }
     } catch (err) {
@@ -285,6 +312,50 @@ export default function RegistrationForm() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleChangeEmail = () => {
+    setAwaitingOtp(false)
+    setOtpCode("")
+    setOtpResendCooldown(0)
+    setEditToken("")
+    setEmailVerificationMode("new")
+    setFormData((prev) => ({ ...prev, email: "" }))
+    setCurrentStep(2)
+    setError("")
+    setFieldErrors({})
+  }
+
+  const handleResendOtp = async () => {
+    if (otpResendCooldown > 0 || loading) return
+    setLoading(true)
+    setError("")
+    setFieldErrors({})
+
+    try {
+      const response = await fetch("/api/registration/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to resend verification code")
+      }
+
+      setOtpCode("")
+      setEmailVerificationMode(result.mode || emailVerificationMode)
+      setCouponRequired(result.couponRequired === true)
+      setOtpResendCooldown(60)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleOtpChange = (value) => {
+    setOtpCode(value.replace(/\D/g, "").slice(0, 6))
   }
 
   const sanitizeFormData = (data) => {
@@ -312,6 +383,7 @@ export default function RegistrationForm() {
 
     setLoading(true)
     setError("")
+    setFieldErrors({})
 
     try {
       const response = await fetch("/api/registration/verify-edit", {
@@ -344,7 +416,7 @@ export default function RegistrationForm() {
           })
         }
 
-        setCurrentStep(3)
+        setCurrentStep(4)
         return
       }
 
@@ -391,10 +463,11 @@ export default function RegistrationForm() {
 
   // Step 3: Coupon validation
   const handleCouponSubmit = async (e) => {
-    e.preventDefault()
+    e?.preventDefault()
 
     if (!couponCode.trim()) {
       if (couponRequired) {
+        setFieldErrors({ coupon: "Coupon code is required" })
         setError("Please enter a coupon code")
         return
       }
@@ -404,7 +477,6 @@ export default function RegistrationForm() {
         ...prev,
         coupon: "",
       }))
-      setCurrentStep(4)
       return
     }
 
@@ -419,6 +491,7 @@ export default function RegistrationForm() {
       })
       const result = await response.json()
       if (!response.ok) {
+        setFieldErrors({ coupon: result.error || "Invalid coupon code" })
         throw new Error(result.error || "Failed to validate coupon")
       }
 
@@ -429,12 +502,23 @@ export default function RegistrationForm() {
         sector: Array.isArray(result.coupon.sector) ? result.coupon.sector : [result.coupon.sector],
         coupon: couponCode,
       }))
-      setCurrentStep(4)
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
+  }
+
+  const clearCoupon = () => {
+    const hadAppliedCoupon = Boolean(couponData)
+    setCouponCode("")
+    setCouponData(null)
+    setFormData((prev) => ({
+      ...prev,
+      coupon: "",
+      organization: hadAppliedCoupon ? "" : prev.organization,
+      sector: hadAppliedCoupon ? [] : prev.sector,
+    }))
   }
 
   // Remove exhibitor member
@@ -454,6 +538,26 @@ export default function RegistrationForm() {
   // Step 4: Registration Form Submission
   const handleRegistrationSubmit = async (e) => {
     e.preventDefault()
+    setFieldErrors({})
+
+    if (!editToken) {
+      setFieldErrors({ email: "Please verify your email before submitting" })
+      setError("Please verify your email before submitting your registration")
+      setCurrentStep(3)
+      return
+    }
+
+    if (!isEditing && couponRequired && !formData.coupon) {
+      setFieldErrors({ coupon: "Please apply your coupon code before submitting" })
+      setError("Please apply your coupon code before submitting your registration")
+      return
+    }
+
+    if (!isEditing && couponCode.trim() && !formData.coupon) {
+      setFieldErrors({ coupon: "Apply this coupon code or clear it before submitting" })
+      setError("Apply the coupon code or clear it before submitting your registration")
+      return
+    }
 
     if (registrationType === "Exhibitor") {
       // Validate exhibitor members
@@ -468,6 +572,7 @@ export default function RegistrationForm() {
       })
 
       if (memberErrors.length > 0) {
+        setFieldErrors({ members: "Please complete all required representative fields" })
         setError(`Please fill in all required member fields:\n${memberErrors.join("\n")}`)
         return
       }
@@ -476,6 +581,7 @@ export default function RegistrationForm() {
       const emails = exhibitorMembers.map((member) => member.email.toLowerCase())
       const duplicateEmails = emails.filter((email, index) => emails.indexOf(email) !== index)
       if (duplicateEmails.length > 0) {
+        setFieldErrors({ members: "Each representative must use a unique email address" })
         setError("Each member must have a unique email address")
         return
       }
@@ -490,6 +596,12 @@ export default function RegistrationForm() {
       }
 
       if (missingFields.length > 0) {
+        setFieldErrors(
+          missingFields.reduce((result, field) => {
+            result[field] = "Required"
+            return result
+          }, {})
+        )
         setError(`Please fill in all required fields: ${missingFields.join(", ")}`)
         return
       }
@@ -497,6 +609,7 @@ export default function RegistrationForm() {
 
     // Common validation
     if (formData.daysAttending.length === 0) {
+      setFieldErrors({ daysAttending: "Select at least one day to attend" })
       setError("Please select at least one day to attend")
       return
     }
@@ -509,7 +622,7 @@ export default function RegistrationForm() {
         ...formData,
         email: formData.email || email,
         registrationType,
-        couponCode: formData.coupon || couponCode,
+        couponCode: formData.coupon,
         editToken,
       }
       if (registrationType === "Exhibitor") {
@@ -526,6 +639,11 @@ export default function RegistrationForm() {
         throw new Error(result.error || "Failed to submit registration")
       }
 
+      setSubmittedRegistration({
+        ...payload,
+        warnings: Array.isArray(result.warnings) ? result.warnings : [],
+        count: result.count,
+      })
       setSuccess(true)
     } catch (err) {
       setError(err.message)
@@ -619,13 +737,19 @@ export default function RegistrationForm() {
   }
 
   if (success) {
-    return <ConfirmationScreen onRegisterAnother={resetForm} conference={conference} />
+    return (
+      <ConfirmationScreen
+        onRegisterAnother={resetForm}
+        conference={conference}
+        registration={submittedRegistration}
+      />
+    )
   }
 
   const steps = [
     { number: 1, title: "Type", icon: User, description: "Registration type" },
     { number: 2, title: "Email", icon: Mail, description: "Verify your email" },
-    { number: 3, title: "Coupon", icon: Ticket, description: couponRequired ? "Enter coupon code" : "Optional coupon" },
+    { number: 3, title: "Verify", icon: Mail, description: "Enter code" },
     { number: 4, title: "Details", icon: Building, description: "Complete details" },
   ]
 
@@ -731,7 +855,7 @@ export default function RegistrationForm() {
           {/* Error Alert */}
           {error && (
             <div className="mb-8 animate-in slide-in-from-top duration-300">
-              <Alert className="border-red-500/50 bg-red-500/10 backdrop-blur-sm">
+              <Alert role="alert" aria-live="assertive" className="border-red-500/50 bg-red-500/10 backdrop-blur-sm">
                 <AlertCircle className="h-4 w-4 text-red-400" />
                 <AlertDescription className="text-red-600 whitespace-pre-line">{error}</AlertDescription>
               </Alert>
@@ -864,6 +988,7 @@ export default function RegistrationForm() {
                           onChange={(e) => setEmail(e.target.value)}
                           placeholder="Enter your email address"
                           className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186] focus:ring-[#0B7186]/20"
+                          autoComplete="email"
                           required
                         />
                       </div>
@@ -902,55 +1027,68 @@ export default function RegistrationForm() {
             </div>
           )}
 
-          {/* Step 3: OTP Verification or Coupon Validation */}
+          {/* Step 3: Email Verification */}
           {currentStep === 3 && (
             <div className="animate-in slide-in-from-right duration-500">
               <Card className="bg-white/95 backdrop-blur-sm border-gray-200 shadow-xl">
                 <CardHeader className="text-center pb-8">
                   <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-r from-[#0B7186] to-[#FFB803] rounded-full mb-4 mx-auto">
-                    {awaitingOtp ? <Mail className="w-6 h-6 text-white" /> : <Ticket className="w-6 h-6 text-white" />}
+                    <Mail className="w-6 h-6 text-white" />
                   </div>
-                  <CardTitle className="text-2xl sm:text-3xl font-bold text-gray-800">
-                    {awaitingOtp ? "Verify Email" : "Coupon Code"}
-                  </CardTitle>
+                  <CardTitle className="text-2xl sm:text-3xl font-bold text-gray-800">Verify Email</CardTitle>
                   <CardDescription className="text-gray-600 text-lg">
-                    {awaitingOtp
-                      ? emailVerificationMode === "edit"
-                        ? "Enter the verification code sent to your email address to edit your registration"
-                        : "Enter the verification code sent to your email address to continue"
-                      : couponRequired
-                        ? "Enter your organization's coupon code to proceed"
-                        : "Enter a coupon code if you have one, or continue without one"}
+                    {emailVerificationMode === "edit"
+                      ? "Enter the verification code sent to your email address to edit your registration"
+                      : "Enter the verification code sent to your email address to continue"}
                   </CardDescription>
+                  <p className="text-sm text-gray-500 mt-3">
+                    Code sent to <span className="font-semibold text-gray-700">{email}</span>
+                  </p>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <form onSubmit={awaitingOtp ? handleOtpSubmit : handleCouponSubmit} className="space-y-6">
+                  <form onSubmit={handleOtpSubmit} className="space-y-6">
                     <div className="space-y-2">
-                      <Label htmlFor={awaitingOtp ? "otp" : "coupon"} className="text-gray-700 font-medium">
-                        {awaitingOtp ? "Verification Code *" : `Coupon Code${couponRequired ? " *" : ""}`}
+                      <Label htmlFor="otp" className="text-gray-700 font-medium">
+                        Verification Code *
                       </Label>
                       <div className="relative">
-                        {awaitingOtp ? (
-                          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                        ) : (
-                          <Ticket className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                        )}
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                         <Input
-                          id={awaitingOtp ? "otp" : "coupon"}
-                          value={awaitingOtp ? otpCode : couponCode}
-                          onChange={(e) => (awaitingOtp ? setOtpCode(e.target.value) : setCouponCode(e.target.value))}
-                          placeholder={awaitingOtp ? "Enter 6-digit code" : "Enter coupon code"}
-                          className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186] focus:ring-[#0B7186]/20"
-                          inputMode={awaitingOtp ? "numeric" : undefined}
-                          required={awaitingOtp || couponRequired}
+                          ref={otpInputRef}
+                          id="otp"
+                          value={otpCode}
+                          onChange={(e) => handleOtpChange(e.target.value)}
+                          placeholder="Enter 6-digit code"
+                          className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186] focus:ring-[#0B7186]/20 text-center tracking-[0.35em] font-semibold"
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          maxLength={6}
+                          required
                         />
                       </div>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg bg-gray-50 border border-gray-200 p-4">
+                      <button
+                        type="button"
+                        onClick={handleChangeEmail}
+                        className="text-sm font-semibold text-[#0B7186] hover:text-[#054653] text-left"
+                      >
+                        Change email
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleResendOtp}
+                        disabled={loading || otpResendCooldown > 0}
+                        className="text-sm font-semibold text-[#0B7186] hover:text-[#054653] disabled:text-gray-400 disabled:cursor-not-allowed text-left sm:text-right"
+                      >
+                        {otpResendCooldown > 0 ? `Resend code in ${otpResendCooldown}s` : "Resend code"}
+                      </button>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-4">
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setCurrentStep(2)}
+                        onClick={handleChangeEmail}
                         className="flex-1 h-12 bg-gradient-to-r from-[#0B7186] to-[#FFB803] hover:from-[#054653] hover:to-[#FFB803] text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                       >
                         <ArrowLeft className="mr-2 h-5 w-5" />
@@ -964,15 +1102,11 @@ export default function RegistrationForm() {
                         {loading ? (
                           <>
                             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                            {awaitingOtp ? "Verifying..." : "Validating..."}
+                            Verifying...
                           </>
                         ) : (
                           <>
-                            {awaitingOtp
-                              ? "Verify"
-                              : couponRequired || couponCode.trim()
-                                ? "Apply Coupon"
-                                : "Continue Without Coupon"}
+                            Verify
                             <ArrowRight className="ml-2 h-5 w-5" />
                           </>
                         )}
@@ -1002,27 +1136,118 @@ export default function RegistrationForm() {
                   <CardDescription className="text-gray-600 text-lg">
                     {isEditing ? "Update your registration information" : "Fill in your details to secure your spot"}
                   </CardDescription>
-                  {couponData && (
-                    <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
-                        <Badge variant="secondary" className="bg-[#0B7186]/10 text-[#0B7186] border-[#0B7186]/20">
-                          <Building className="w-3 h-3 mr-1" />
-                          {couponData.organization}
-                        </Badge>
-                        <Badge variant="secondary" className="bg-[#FFB803]/10 text-[#054653] border-[#FFB803]/20">
-                          <Globe className="w-3 h-3 mr-1" />
-                          {couponData.sector}
-                        </Badge>
-                        {/*EXHIB <Badge variant="secondary" className="bg-[#054653]/10 text-[#054653] border-[#054653]/20">
-                          <User className="w-3 h-3 mr-1" />
-                          {couponData.usersLeft} seats left
-                        </Badge> */}
-                      </div>
-                    </div>
-                  )}
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleRegistrationSubmit} className="space-y-8">
+                    {isEditing && (
+                      <div className="rounded-xl border border-[#0B7186]/20 bg-[#0B7186]/10 p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                          <div>
+                            <p className="font-semibold text-[#054653]">
+                              Editing existing registration for {formData.firstName || formData.email}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              Changes will update the registration tied to {formData.email}.
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={resetForm}
+                            className="border-[#0B7186] text-[#0B7186] hover:bg-white"
+                          >
+                            Cancel Edit
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {!isEditing && (
+                      <div className="space-y-4 rounded-xl border border-gray-200 bg-gray-50 p-5">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-2">
+                            <Ticket className="w-5 h-5 text-[#0B7186]" />
+                            <h3 className="text-lg font-semibold text-gray-800">
+                              {couponRequired ? "Coupon Code" : "Have a coupon?"}
+                            </h3>
+                          </div>
+                          {!couponRequired && !couponData && (
+                            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Optional</span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          {couponRequired
+                            ? "Apply your organization's coupon code before submitting this registration."
+                            : "Apply a coupon if your organization provided one. Otherwise continue with your details below."}
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-3">
+                          <div className="relative">
+                            <Ticket className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                            <Input
+                              id="coupon"
+                              value={couponCode}
+                              onChange={(e) => {
+                                setCouponCode(e.target.value)
+                                if (formData.coupon && e.target.value !== formData.coupon) {
+                                  setCouponData(null)
+                                  setFormData((prev) => ({ ...prev, coupon: "" }))
+                                }
+                              }}
+                              placeholder="Enter coupon code"
+                              className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186] focus:ring-[#0B7186]/20"
+                              required={couponRequired}
+                              aria-invalid={Boolean(fieldErrors.coupon)}
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            onClick={handleCouponSubmit}
+                            className="h-12 bg-[#0B7186] hover:bg-[#054653] text-white font-semibold"
+                            disabled={loading || (couponData && formData.coupon === couponCode)}
+                          >
+                            {loading ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Applying...
+                              </>
+                            ) : couponData && formData.coupon === couponCode ? (
+                              <>
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Applied
+                              </>
+                            ) : (
+                              "Apply"
+                            )}
+                          </Button>
+                          {(couponCode || couponData) && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={clearCoupon}
+                              className="h-12 border-gray-300 text-gray-700 hover:bg-white"
+                              disabled={loading}
+                            >
+                              Clear
+                            </Button>
+                          )}
+                        </div>
+                        <FieldError message={fieldErrors.coupon} />
+                        {couponData && (
+                          <div className="flex flex-wrap items-center gap-3 rounded-lg bg-white border border-gray-200 p-4 text-sm">
+                            <Badge variant="secondary" className="bg-[#0B7186]/10 text-[#0B7186] border-[#0B7186]/20">
+                              <Building className="w-3 h-3 mr-1" />
+                              {couponData.organization}
+                            </Badge>
+                            <Badge variant="secondary" className="bg-[#FFB803]/10 text-[#054653] border-[#FFB803]/20">
+                              <Globe className="w-3 h-3 mr-1" />
+                              {couponData.sector}
+                            </Badge>
+                            <span className="text-gray-500">{couponData.usersLeft} seats left</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Exhibitor Members Section */}
                     {registrationType === "Exhibitor" && (
                       <div className="space-y-6">
@@ -1050,6 +1275,7 @@ export default function RegistrationForm() {
                           <p>• Each member will receive individual confirmation emails</p> */}
                           <p>• You will receive a confirmation emails after registration.</p>
                         </div>
+                        <FieldError message={fieldErrors.members} />
 
                         {exhibitorMembers.map((member, index) => (
                           <Card key={index} className="bg-gray-50 border border-gray-200">
@@ -1214,6 +1440,7 @@ export default function RegistrationForm() {
                                 ))}
                               </SelectContent>
                             </Select>
+                            <FieldError message={fieldErrors.title} />
                           </div>
 
                           <div className="space-y-2">
@@ -1225,8 +1452,10 @@ export default function RegistrationForm() {
                               value={formData.firstName}
                               onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))}
                               className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                              autoComplete="given-name"
                               required
                             />
+                            <FieldError message={fieldErrors.firstName} />
                           </div>
                         </div>
 
@@ -1240,8 +1469,10 @@ export default function RegistrationForm() {
                               value={formData.lastName}
                               onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))}
                               className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                              autoComplete="family-name"
                               required
                             />
+                            <FieldError message={fieldErrors.lastName} />
                           </div>
 
                           <div className="space-y-2">
@@ -1254,6 +1485,7 @@ export default function RegistrationForm() {
                               onChange={(e) => setFormData((prev) => ({ ...prev, otherName: e.target.value }))}
                               className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
                             />
+                            <FieldError message={fieldErrors.phone} />
                           </div>
                         </div>
 
@@ -1286,6 +1518,7 @@ export default function RegistrationForm() {
                                 value={formData.otherEmail}
                                 onChange={(e) => setFormData((prev) => ({ ...prev, otherEmail: e.target.value }))}
                                 className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                                autoComplete="email"
                               />
                             </div>
                           </div>
@@ -1338,10 +1571,12 @@ export default function RegistrationForm() {
                             className={`pl-10 h-12 border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186] ${
                               !!couponData ? "bg-white/5 cursor-not-allowed" : "bg-white"
                             }`}
+                            autoComplete="organization"
                             required
                             disabled={!!couponData}
                           />
                         </div>
+                        <FieldError message={fieldErrors.organization} />
                       </div>
 
                       {registrationType === "Exhibitor" && (
@@ -1378,8 +1613,10 @@ export default function RegistrationForm() {
                             value={formData.city}
                             onChange={(e) => setFormData((prev) => ({ ...prev, city: e.target.value }))}
                             className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                            autoComplete="address-level2"
                             required
                           />
+                          <FieldError message={fieldErrors.city} />
                         </div>
 
                         <div className="space-y-2">
@@ -1391,8 +1628,10 @@ export default function RegistrationForm() {
                             value={formData.stateRegion}
                             onChange={(e) => setFormData((prev) => ({ ...prev, stateRegion: e.target.value }))}
                             className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                            autoComplete="address-level1"
                             required
                           />
+                          <FieldError message={fieldErrors.stateRegion} />
                         </div>
                       </div>
 
@@ -1416,6 +1655,7 @@ export default function RegistrationForm() {
                             ))}
                           </SelectContent>
                         </Select>
+                        <FieldError message={fieldErrors.country} />
                       </div>
                     </div>
 
@@ -1455,6 +1695,7 @@ export default function RegistrationForm() {
                             )
                           })}
                         </div>
+                        <FieldError message={fieldErrors.daysAttending} />
                       </div>
 
                       <div className="space-y-4">
@@ -1525,9 +1766,11 @@ export default function RegistrationForm() {
                               onChange={(e) => setFormData((prev) => ({ ...prev, passportNumber: e.target.value }))}
                               placeholder="Enter passport number"
                               className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                              aria-invalid={Boolean(fieldErrors.passportNumber)}
                               required
                             />
                           </div>
+                          <FieldError message={fieldErrors.passportNumber} />
                         </div>
                       )}
 
@@ -1551,11 +1794,11 @@ export default function RegistrationForm() {
                         <Button
                           type="button"
                           variant="outline"
-                          onClick={() => setCurrentStep(3)}
+                          onClick={resetForm}
                           className="flex-1 h-12 bg-gradient-to-r from-[#0B7186] to-[#FFB803] hover:from-[#054653] hover:to-[#FFB803] text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                         >
                           <ArrowLeft className="mr-2 h-5 w-5" />
-                          Back
+                          Start Over
                         </Button>
                       )}
                       <Button

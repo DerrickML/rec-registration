@@ -27,51 +27,50 @@ export default function Navbar({ conference }) {
 
   return (
     <>
-      <header className="glass-card !bg-white/80 border-b border-gray-200/60 sticky top-0 z-50 !rounded-none !shadow-none">
+      <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex items-center justify-between">
             {/* Logo + Brand */}
-            <Link href="/" className="flex items-center space-x-3 flex-shrink-0">
+            <Link href="/" className="flex min-w-0 flex-shrink-0 items-center space-x-3">
               {conference.logoUrl ? (
                 <img
                   src={conference.logoUrl}
                   alt={conference.shortName || "Logo"}
-                  className="w-10 h-10 rounded-xl object-contain"
+                  className="h-10 w-10 rounded-lg object-contain"
                 />
               ) : (
-                <div className="w-10 h-10 bg-gradient-to-br from-[#0B7186] to-[#054653] rounded-xl flex items-center justify-center shadow-md shadow-[#0B7186]/20">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#0B7186] shadow-md shadow-[#0B7186]/20">
                   <Sparkles className="w-5 h-5 text-white" />
                 </div>
               )}
-              <div className="hidden sm:block">
-                <h1 className="text-lg font-bold text-gray-900 leading-tight">
+              <div className="hidden min-w-0 sm:block">
+                <h1 className="truncate text-base font-bold leading-tight text-gray-950">
                   {conference.shortName || "NREP"}
                 </h1>
-                <p className="text-xs text-gray-500 font-medium">
+                <p className="max-w-[260px] truncate text-xs font-medium text-gray-500 lg:max-w-[360px]">
                   {conference.fullName || "Renewable Energy Platform"}
                 </p>
               </div>
             </Link>
 
             {/* Desktop Nav */}
-            <nav className="hidden md:flex items-center space-x-1">
+            <nav className="hidden md:flex items-center space-x-1" aria-label="Primary navigation">
               {NAV_LINKS.map((link) => {
                 const isActive =
                   link.href === "/"
                     ? pathname === "/"
                     : pathname.startsWith(link.href)
                 return (
-                  <Link key={link.href} href={link.href}>
-                    <Button
-                      variant="ghost"
-                      className={`text-sm font-medium transition-colors ${
-                        isActive
-                          ? "text-[#0B7186] bg-[#0B7186]/5"
-                          : "text-gray-600 hover:text-[#0B7186] hover:bg-[#0B7186]/5"
-                      }`}
-                    >
-                      {link.label}
-                    </Button>
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+                      isActive
+                        ? "bg-[#0B7186]/[0.08] text-[#0B7186]"
+                        : "text-gray-600 hover:bg-[#0B7186]/[0.06] hover:text-[#0B7186]"
+                    }`}
+                  >
+                    {link.label}
                   </Link>
                 )
               })}
@@ -83,7 +82,7 @@ export default function Navbar({ conference }) {
                 >
                   <Button
                     variant="ghost"
-                    className="text-gray-600 hover:text-[#0B7186] hover:bg-[#0B7186]/5 font-medium text-sm"
+                    className="h-9 rounded-lg text-sm font-semibold text-gray-600 hover:bg-[#0B7186]/[0.06] hover:text-[#0B7186]"
                   >
                     NREP
                     <ExternalLink className="ml-1.5 w-3.5 h-3.5" />
@@ -96,7 +95,7 @@ export default function Navbar({ conference }) {
             <div className="flex items-center space-x-2">
               {conference.registrationOpen && (
                 <Link href="/register">
-                  <Button className="bg-[#0B7186] hover:bg-[#054653] text-white text-sm px-4 h-9 shadow-md shadow-[#0B7186]/20 transition-all hover:shadow-lg hover:shadow-[#0B7186]/25">
+                  <Button className="h-9 rounded-lg bg-[#0B7186] px-4 text-sm font-semibold text-white shadow-sm shadow-[#0B7186]/20 transition-all hover:bg-[#054653] hover:shadow-md hover:shadow-[#0B7186]/25">
                     Register
                     <ArrowRight className="ml-1.5 w-3.5 h-3.5" />
                   </Button>
@@ -106,8 +105,9 @@ export default function Navbar({ conference }) {
               {/* Mobile menu button */}
               <button
                 onClick={() => setMobileOpen(!mobileOpen)}
-                className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+                className="rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 md:hidden"
                 aria-label="Toggle menu"
+                aria-expanded={mobileOpen}
               >
                 {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
@@ -117,8 +117,8 @@ export default function Navbar({ conference }) {
 
         {/* Mobile menu dropdown */}
         {mobileOpen && (
-          <div className="md:hidden border-t border-gray-100 bg-white/95 backdrop-blur-lg animate-in slide-in-from-top-2 duration-200">
-            <nav className="px-4 py-3 space-y-1">
+          <div className="border-t border-gray-100 bg-white md:hidden">
+            <nav className="space-y-1 px-4 py-3" aria-label="Mobile navigation">
               {NAV_LINKS.map((link) => {
                 const isActive =
                   link.href === "/"
@@ -131,8 +131,8 @@ export default function Navbar({ conference }) {
                     onClick={() => setMobileOpen(false)}
                     className={`block px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                       isActive
-                        ? "text-[#0B7186] bg-[#0B7186]/5"
-                        : "text-gray-600 hover:text-[#0B7186] hover:bg-gray-50"
+                        ? "bg-[#0B7186]/[0.08] text-[#0B7186]"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-[#0B7186]"
                     }`}
                   >
                     {link.label}

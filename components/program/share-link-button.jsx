@@ -16,7 +16,7 @@ export default function ShareLinkButton({ conference }) {
 
       // Create a shareable message
       const conferenceTitle = conference?.title || "Conference"
-      const shareMessage = `📄 ${conferenceTitle} Program\n\nDownload the full conference program PDF:\n${downloadUrl}\n\nGet all sessions, speakers, and schedule details in one PDF.`
+      const shareMessage = `${conferenceTitle} Program\n\nDownload the full conference program PDF:\n${downloadUrl}\n\nGet all sessions, speakers, and schedule details in one PDF.`
 
       // Try to use native share API if available (mobile devices)
       if (navigator.share && navigator.canShare({ text: shareMessage })) {
@@ -54,7 +54,7 @@ export default function ShareLinkButton({ conference }) {
     <Button
       onClick={handleShare}
       variant="outline"
-      className="border-[#0B7186] text-[#0B7186] hover:bg-[#0B7186] hover:text-white transition-all duration-300 shadow-md hover:shadow-lg"
+      className="h-11 rounded-lg border-[#0B7186]/25 px-5 font-semibold text-[#0B7186] shadow-sm transition-all duration-300 hover:bg-[#0B7186]/5 hover:text-[#054653]"
     >
       {copied ? (
         <>

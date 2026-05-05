@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Calendar,
   MapPin,
@@ -12,19 +11,14 @@ import {
   ArrowRight,
   Sparkles,
   Clock,
-  CheckCircle,
-  Loader2,
-  AlertCircle,
-  Leaf,
-  Users,
   Globe,
   Target,
-  Lightbulb,
 } from "lucide-react"
 import * as LucideIcons from "lucide-react"
 import { apiService } from "../lib/api-service"
 import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
+import { PageErrorState, PageLoadingState } from "@/components/layout/public-page-state"
 
 /* ───────── Countdown Timer Component ───────── */
 function CountdownTimer({ targetDate }) {
@@ -62,22 +56,17 @@ function CountdownTimer({ targetDate }) {
   ]
 
   return (
-    <div className="flex items-center justify-center gap-3 sm:gap-4">
-      {blocks.map((block, i) => (
-        <div key={block.label} className="flex items-center gap-3 sm:gap-4">
-          <div className="text-center">
-            <div className="w-16 sm:w-20 h-16 sm:h-20 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/15 flex items-center justify-center mb-1.5">
-              <span className="text-2xl sm:text-3xl font-bold text-white tabular-nums">
-                {String(block.value).padStart(2, "0")}
-              </span>
-            </div>
-            <span className="text-[10px] sm:text-xs font-medium text-white/60 uppercase tracking-wider">
-              {block.label}
+    <div className="grid grid-cols-4 gap-2 sm:gap-3">
+      {blocks.map((block) => (
+        <div key={block.label} className="text-center">
+          <div className="mb-1.5 flex h-14 items-center justify-center rounded-lg border border-white/[0.15] bg-white/10 sm:h-16">
+            <span className="text-xl font-bold tabular-nums text-white sm:text-2xl">
+              {String(block.value).padStart(2, "0")}
             </span>
           </div>
-          {i < blocks.length - 1 && (
-            <span className="text-xl font-bold text-white/30 mb-6">:</span>
-          )}
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-white/[0.58]">
+            {block.label}
+          </span>
         </div>
       ))}
     </div>
@@ -168,27 +157,16 @@ export default function HomePage() {
 
   /* ─── Loading ─── */
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30 flex items-center justify-center">
-        <div className="text-center animate-fade-in-scale">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#0B7186] to-[#FFB803] flex items-center justify-center mx-auto mb-6 animate-glow-pulse">
-            <Loader2 className="w-8 h-8 animate-spin text-white" />
-          </div>
-          <p className="text-gray-500 font-medium">Loading conference information...</p>
-        </div>
-      </div>
-    )
+    return <PageLoadingState message="Loading conference information..." />
   }
 
   /* ─── Error / Empty ─── */
   if (error || !conference) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30 flex items-center justify-center p-4">
-        <Alert className="max-w-md glass-card">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error || "No active conference found."}</AlertDescription>
-        </Alert>
-      </div>
+      <PageErrorState
+        title="Conference unavailable"
+        message={error || "No active conference found."}
+      />
     )
   }
 
@@ -220,6 +198,14 @@ export default function HomePage() {
   // Stats data
   const maxAttendees = conference.maxAttendees || 500
   const daysCount = days.length || 3
+  const heroTitle =
+    conference.title || conference.shortName || "Renewable Energy Conference & Expo"
+  const heroIntro =
+    (conference.heroTagline && conference.heroTagline !== conference.theme
+      ? conference.heroTagline
+      : "") ||
+    conference.description ||
+    "Join renewable energy leaders, innovators, and policymakers for practical conversations, partnerships, and sector momentum."
 
   return (
     <div className="min-h-screen bg-white">
@@ -227,116 +213,103 @@ export default function HomePage() {
       <Navbar conference={conference} />
 
       {/* ─── Hero Section ─── */}
-      <section className="relative min-h-[85vh] flex items-center overflow-hidden">
-        {/* Background Image */}
+      <section className="relative flex min-h-[76vh] items-center overflow-hidden bg-[#054653]">
         {conference.heroImageUrl ? (
           <div className="absolute inset-0">
             <img
               src={conference.heroImageUrl}
-              alt="Conference hero"
-              className="w-full h-full object-cover"
+              alt="Conference venue and attendees"
+              className="h-full w-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-gray-900/70 via-gray-900/60 to-gray-900/85" />
+            <div className="absolute inset-0 bg-gradient-to-r from-gray-950/[0.88] via-gray-950/70 to-gray-950/[0.35]" />
           </div>
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-[#054653] via-[#0B7186] to-[#054653] animate-gradient-shift">
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,#053d49_0%,#0B7186_58%,#084e5c_100%)]">
             <div
-              className="absolute inset-0 opacity-10"
+              className="absolute inset-0 opacity-[0.08]"
               style={{
-                backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.3) 1px, transparent 1px)",
+                backgroundImage:
+                  "radial-gradient(circle, rgba(255,255,255,0.35) 1px, transparent 1px)",
                 backgroundSize: "24px 24px",
               }}
             />
-            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#FFB803]/15 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-white/5 rounded-full blur-3xl" />
           </div>
         )}
 
-        <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 text-center w-full">
-          {/* Conference badge */}
-          <div className="animate-fade-in-up">
-            <Badge className="mb-6 px-4 py-2 bg-white/10 backdrop-blur-sm text-white/90 border border-white/15 text-sm font-medium rounded-full">
-              <Leaf className="w-3.5 h-3.5 mr-1.5" />
-              {conference.shortName || conference.title?.split(" ").slice(0, 4).join(" ") || "Conference"}
-            </Badge>
-          </div>
+        <div className="relative z-10 mx-auto grid w-full max-w-7xl gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-end lg:px-8">
+          <div className="max-w-4xl">
+            <h1 className="animate-fade-in-up text-4xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-6xl">
+              {heroTitle}
+            </h1>
 
-          {/* Main heading */}
-          <h1 className="animate-fade-in-up delay-100 text-4xl sm:text-5xl lg:text-7xl font-extrabold tracking-tight text-white mb-5 leading-[1.08]">
-            {conference.heroTagline || conference.title || "Renewable Energy Conference"}
-          </h1>
-
-          {/* Theme */}
-          {conference.theme && (
-            <p className="animate-fade-in-up delay-200 text-lg sm:text-xl text-[#FFB803] font-medium mb-3 max-w-3xl mx-auto italic">
-              "{conference.theme}"
-            </p>
-          )}
-
-          {/* Description */}
-          <p className="animate-fade-in-up delay-200 text-base sm:text-lg text-white/60 mb-10 max-w-2xl mx-auto leading-relaxed">
-            {conference.description ||
-              "Join the most anticipated renewable energy event bringing together industry leaders, innovators, and changemakers."}
-          </p>
-
-          {/* Info pills */}
-          <div className="animate-fade-in-up delay-300 flex flex-wrap items-center justify-center gap-3 mb-10">
-            <div className="flex items-center space-x-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/10">
-              <Calendar className="w-4 h-4 text-[#FFB803]" />
-              <span className="text-sm font-medium text-white/90">
-                {formatDateRange(conference.startDate, conference.endDate)}
-              </span>
-            </div>
-            <div className="flex items-center space-x-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/10">
-              <MapPin className="w-4 h-4 text-[#FFB803]" />
-              <span className="text-sm font-medium text-white/90">{conference.location}</span>
-            </div>
-            {conference.venue && (
-              <div className="flex items-center space-x-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/10">
-                <Building className="w-4 h-4 text-[#FFB803]" />
-                <span className="text-sm font-medium text-white/90">{conference.venue}</span>
-              </div>
+            {conference.theme && (
+              <p className="animate-fade-in-up delay-100 mt-5 max-w-3xl text-lg font-semibold leading-7 text-[#FFB803] sm:text-xl">
+                {conference.theme}
+              </p>
             )}
-          </div>
 
-          {/* CTA buttons */}
-          <div className="animate-fade-in-up delay-400 flex flex-col sm:flex-row items-center justify-center gap-4 mb-14">
-            {conference.registrationOpen ? (
-              <Link href="/register">
-                <Button
-                  size="lg"
-                  className="bg-[#FFB803] hover:bg-[#D9A003] text-gray-900 px-8 h-13 text-base font-bold shadow-lg shadow-[#FFB803]/25 hover:shadow-xl transition-all duration-300 rounded-xl"
+            <p className="animate-fade-in-up delay-200 mt-5 max-w-2xl text-base leading-7 text-white/[0.72] sm:text-lg">
+              {heroIntro}
+            </p>
+
+            <div className="animate-fade-in-up delay-300 mt-8 flex flex-wrap items-center gap-3">
+              <div className="flex items-center space-x-2 rounded-lg border border-white/[0.15] bg-white/10 px-4 py-2 backdrop-blur-sm">
+                <Calendar className="h-4 w-4 text-[#FFB803]" />
+                <span className="text-sm font-semibold text-white/90">
+                  {formatDateRange(conference.startDate, conference.endDate)}
+                </span>
+              </div>
+              {conference.location && (
+                <div className="flex items-center space-x-2 rounded-lg border border-white/[0.15] bg-white/10 px-4 py-2 backdrop-blur-sm">
+                  <MapPin className="h-4 w-4 text-[#FFB803]" />
+                  <span className="text-sm font-semibold text-white/90">{conference.location}</span>
+                </div>
+              )}
+              {conference.venue && (
+                <div className="flex items-center space-x-2 rounded-lg border border-white/[0.15] bg-white/10 px-4 py-2 backdrop-blur-sm">
+                  <Building className="h-4 w-4 text-[#FFB803]" />
+                  <span className="text-sm font-semibold text-white/90">{conference.venue}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="animate-fade-in-up delay-400 mt-9 flex flex-col gap-3 sm:flex-row">
+              {conference.registrationOpen ? (
+                <Link href="/register">
+                  <Button
+                    size="lg"
+                    className="h-12 rounded-lg bg-[#FFB803] px-7 text-base font-bold text-gray-950 shadow-lg shadow-[#FFB803]/20 transition-all hover:bg-[#D9A003]"
+                  >
+                    Register Now
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+              ) : (
+                <Badge
+                  variant="secondary"
+                  className="inline-flex h-12 items-center rounded-lg border border-white/[0.15] bg-white/10 px-5 text-sm font-semibold text-white/[0.85]"
                 >
-                  Register Now
-                  <ArrowRight className="ml-2 w-4 h-4" />
+                  <Clock className="mr-2 h-4 w-4" />
+                  {conference.regClosedMessage || "Registration Opening Soon"}
+                </Badge>
+              )}
+
+              <Link href="/program">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="h-12 rounded-lg border-white/25 bg-transparent px-7 text-base font-semibold text-white transition-all hover:bg-white/10 hover:text-white"
+                >
+                  View Program
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-            ) : (
-              <Badge
-                variant="secondary"
-                className="px-5 py-2.5 text-sm bg-white/10 backdrop-blur-sm text-white/80 border border-white/15 rounded-xl"
-              >
-                <Clock className="w-4 h-4 mr-2" />
-                {conference.regClosedMessage || "Registration Opening Soon"}
-              </Badge>
-            )}
-
-            <Link href="/program">
-              <Button
-                variant="outline"
-                size="lg"
-                className="border-white/20 text-white hover:bg-white/10 px-8 h-13 text-base font-semibold rounded-xl transition-all bg-transparent"
-              >
-                View Program
-                <ArrowRight className="ml-2 w-4 h-4" />
-              </Button>
-            </Link>
+            </div>
           </div>
 
-          {/* Countdown timer */}
           {new Date(conference.startDate) > new Date() && (
-            <div className="animate-fade-in-up delay-500">
-              <p className="text-xs text-white/40 uppercase tracking-widest font-medium mb-4">
+            <div className="animate-fade-in-up delay-500 rounded-xl border border-white/[0.15] bg-white/10 p-5 backdrop-blur-sm">
+              <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-white/[0.55]">
                 Conference Starts In
               </p>
               <CountdownTimer targetDate={conference.startDate} />
@@ -346,9 +319,9 @@ export default function HomePage() {
       </section>
 
       {/* ─── Stats Bar ─── */}
-      <section className="py-14 bg-gradient-to-r from-slate-50 to-teal-50/30 border-y border-gray-100">
+      <section className="border-y border-gray-100 bg-slate-50 py-12">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap items-center justify-center divide-x divide-gray-200">
+          <div className="grid grid-cols-2 gap-y-8 divide-x-0 md:grid-cols-4 md:divide-x md:divide-gray-200">
             <AnimatedStat value={maxAttendees} suffix="+" label="Expected Attendees" />
             <AnimatedStat value={daysCount} suffix="" label={`Day${daysCount !== 1 ? "s" : ""} of Sessions`} />
             <AnimatedStat value={20} suffix="+" label="Countries" />
@@ -361,7 +334,7 @@ export default function HomePage() {
       {conference.theme && (
         <section className="py-20 sm:py-24 px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto text-center">
-            <Badge className="mb-6 px-4 py-2 bg-[#0B7186]/8 text-[#0B7186] border border-[#0B7186]/15 text-sm font-medium rounded-full">
+            <Badge className="mb-6 px-4 py-2 bg-[#0B7186]/[0.08] text-[#0B7186] border border-[#0B7186]/[0.15] text-sm font-medium rounded-full">
               <Target className="w-3.5 h-3.5 mr-1.5" />
               Conference Theme
             </Badge>
@@ -386,7 +359,7 @@ export default function HomePage() {
       )}
 
       {/* ─── Why Attend (Features) ─── */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-transparent via-[#0B7186]/[0.02] to-transparent">
+      <section className="bg-white px-4 py-20 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
@@ -403,10 +376,10 @@ export default function HomePage() {
               return (
                 <div
                   key={feature.title}
-                  className="group p-7 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5"
+                  className="group rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all duration-300 hover:border-[#0B7186]/25 hover:shadow-lg"
                 >
                   <div
-                    className={`w-13 h-13 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-5 shadow-lg group-hover:scale-110 transition-transform duration-300`}
+                    className={`mb-5 flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br ${feature.color} shadow-sm transition-transform duration-300 group-hover:scale-105`}
                   >
                     <Icon className="w-6 h-6 text-white" />
                   </div>
@@ -436,13 +409,13 @@ export default function HomePage() {
               {days.map((day, index) => (
                 <div
                   key={index}
-                  className="group relative p-6 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 overflow-hidden"
+                  className="group relative overflow-hidden rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all duration-300 hover:border-[#0B7186]/25 hover:shadow-lg"
                 >
                   {/* Top accent bar */}
                   <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#0B7186] to-[#FFB803]" />
 
                   <div className="flex items-center justify-between mb-4 pt-2">
-                    <Badge className="bg-[#0B7186] text-white text-xs font-semibold px-3 py-1 rounded-full">
+                    <Badge className="rounded-md bg-[#0B7186] px-3 py-1 text-xs font-semibold text-white">
                       Day {index + 1}
                     </Badge>
                     {day.date && (
@@ -457,7 +430,7 @@ export default function HomePage() {
                   </div>
                   <h3 className="text-lg font-bold text-gray-900 mb-3">{day.label || `Day ${index + 1}`}</h3>
                   {day.theme && (
-                    <div className="p-3 bg-gradient-to-r from-[#0B7186]/5 to-[#FFB803]/5 rounded-lg">
+                    <div className="rounded-lg border border-[#0B7186]/10 bg-[#0B7186]/5 p-3">
                       <p className="text-sm text-gray-600 leading-relaxed">{day.theme}</p>
                     </div>
                   )}
@@ -527,27 +500,25 @@ export default function HomePage() {
       {/* ─── CTA Section ─── */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
-          <div className="relative rounded-3xl bg-gradient-to-br from-[#0B7186] via-[#054653] to-[#0B7186] p-10 sm:p-14 text-center overflow-hidden">
+          <div className="relative overflow-hidden rounded-xl bg-[#054653] p-8 text-center sm:p-12">
             {/* Background pattern */}
             <div
-              className="absolute inset-0 opacity-10"
+              className="absolute inset-0 opacity-[0.08]"
               style={{
                 backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.3) 1px, transparent 1px)",
                 backgroundSize: "24px 24px",
               }}
             />
-            <div className="absolute top-0 right-0 w-64 h-64 bg-[#FFB803]/20 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full blur-2xl" />
 
             <div className="relative z-10">
               <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
                 {conference.registrationOpen
-                  ? "Ready to Join the Revolution?"
+                  ? "Reserve Your Seat at " + (conference.shortName || "the Conference")
                   : "Get Ready for " + (conference.shortName || "the Conference")}
               </h2>
               <p className="text-lg text-white/70 mb-8 max-w-xl mx-auto">
                 {conference.registrationOpen
-                  ? "Don't miss this opportunity to be part of the most important renewable energy event of the year."
+                  ? "Join the conversations, exhibitions, and partnerships shaping renewable energy progress."
                   : "Registration will open soon. Stay tuned for updates on Africa's premier renewable energy gathering."}
               </p>
 
@@ -556,7 +527,7 @@ export default function HomePage() {
                   <Link href="/register">
                     <Button
                       size="lg"
-                      className="bg-[#FFB803] text-gray-900 hover:bg-[#D9A003] px-8 h-12 text-base font-bold shadow-xl hover:shadow-2xl transition-all duration-300 rounded-xl"
+                      className="h-12 rounded-lg bg-[#FFB803] px-8 text-base font-bold text-gray-950 shadow-lg shadow-[#FFB803]/20 transition-all duration-300 hover:bg-[#D9A003]"
                     >
                       Register Now
                       <ArrowRight className="ml-2 w-4 h-4" />
@@ -566,8 +537,8 @@ export default function HomePage() {
                   conference.contactPhone && (
                     <a href={`tel:${conference.contactPhone}`}>
                       <Button
-                        size="lg"
-                        className="bg-white text-[#0B7186] hover:bg-gray-100 px-8 h-12 text-base font-semibold shadow-xl rounded-xl"
+                      size="lg"
+                        className="h-12 rounded-lg bg-white px-8 text-base font-semibold text-[#0B7186] shadow-lg hover:bg-gray-100"
                       >
                         Contact Us for Updates
                       </Button>
@@ -578,7 +549,7 @@ export default function HomePage() {
                   <Button
                     variant="outline"
                     size="lg"
-                    className="border-white/20 text-white hover:bg-white/10 px-8 h-12 text-base font-semibold rounded-xl bg-transparent"
+                    className="h-12 rounded-lg border-white/25 bg-transparent px-8 text-base font-semibold text-white hover:bg-white/10 hover:text-white"
                   >
                     Learn More
                     <ArrowRight className="ml-2 w-4 h-4" />

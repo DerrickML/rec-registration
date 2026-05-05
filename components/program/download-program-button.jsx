@@ -39,7 +39,7 @@ export default function DownloadProgramButton({ conference, program, sessions })
     <Button
       onClick={handleDownload}
       disabled={isGenerating}
-      className="bg-gradient-to-r from-[#0B7186] to-[#FFB803] hover:from-[#054653] hover:to-[#FFB803] text-white shadow-lg hover:shadow-xl transition-all duration-300"
+      className="h-11 rounded-lg bg-[#0B7186] px-5 font-semibold text-white shadow-sm transition-all duration-300 hover:bg-[#054653] hover:shadow-md"
     >
       {isGenerating ? (
         <>

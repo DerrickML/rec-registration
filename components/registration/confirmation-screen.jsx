@@ -1,10 +1,11 @@
 "use client"
 
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle, Calendar, Users, Sparkles, ArrowRight, Mail, MapPin } from "lucide-react"
+import { CheckCircle, Calendar, Users, Sparkles, ArrowRight, Mail, MapPin, AlertCircle } from "lucide-react"
 
-export default function ConfirmationScreen({ onRegisterAnother, conference }) {
+export default function ConfirmationScreen({ onRegisterAnother, conference, registration }) {
   const formatDateRange = (startDate, endDate) => {
     if (!startDate || !endDate) return "TBD"
     const start = new Date(startDate)
@@ -22,6 +23,8 @@ export default function ConfirmationScreen({ onRegisterAnother, conference }) {
   const eventVenue = conference?.venue
     ? `${conference.venue}, ${conference.location || ""}`
     : "Venue TBD"
+  const warnings = Array.isArray(registration?.warnings) ? registration.warnings : []
+  const daysAttending = Array.isArray(registration?.daysAttending) ? registration.daysAttending : []
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
@@ -49,6 +52,16 @@ export default function ConfirmationScreen({ onRegisterAnother, conference }) {
               </CardHeader>
 
               <CardContent className="space-y-8">
+                {warnings.length > 0 && (
+                  <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-left">
+                    <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-amber-900">Registration saved, email pending</p>
+                      <p className="text-sm text-amber-800">{warnings[0]}</p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Success Animation */}
                 <div className="flex justify-center">
                   <div className="relative">
@@ -121,14 +134,47 @@ export default function ConfirmationScreen({ onRegisterAnother, conference }) {
                   </div>
                 </div>
 
+                {registration && (
+                  <div className="space-y-4 p-6 bg-white rounded-xl border border-gray-200">
+                    <h4 className="font-bold text-xl text-gray-800 text-center">Registration Summary</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-gray-500">Email</p>
+                        <p className="font-semibold text-gray-800 break-all">{registration.email}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Registration Type</p>
+                        <p className="font-semibold text-gray-800">{registration.registrationType}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Days Attending</p>
+                        <p className="font-semibold text-gray-800">
+                          {daysAttending.length ? daysAttending.join(", ") : "Not specified"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Registrants</p>
+                        <p className="font-semibold text-gray-800">{registration.count || 1}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Action Button */}
-                <div className="text-center pt-4">
+                <div className="flex flex-col sm:flex-row gap-4 pt-4">
                   <Button
                     onClick={onRegisterAnother}
-                    className="w-full sm:w-auto px-8 h-12 bg-gradient-to-r from-[#0B7186] to-[#FFB803] hover:from-[#054653] hover:to-[#FFB803] text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                    className="flex-1 px-8 h-12 bg-gradient-to-r from-[#0B7186] to-[#FFB803] hover:from-[#054653] hover:to-[#FFB803] text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                   >
                     Make Another Registration
                     <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="flex-1 px-8 h-12 border-2 border-[#0B7186] text-[#0B7186] hover:bg-[#0B7186] hover:text-white font-semibold"
+                  >
+                    <Link href="/">Back to Home</Link>
                   </Button>
                 </div>
 

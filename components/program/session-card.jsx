@@ -3,27 +3,27 @@
 import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { MapPin, Building, Users } from "lucide-react"
+import { Building, ChevronRight, ChevronUp, MapPin, Users } from "lucide-react"
 import { sanitizeRichHtml } from "@/lib/sanitize-html"
 
 export default function SessionCard({ session }) {
   const [expanded, setExpanded] = useState(false)
 
   return (
-    <Card className="bg-white border-gray-200 shadow-md hover:shadow-xl transition-all duration-300 hover:border-[#0B7186]/30 group">
+    <Card className="group border-gray-200 bg-white shadow-sm transition-all duration-300 hover:border-[#0B7186]/30 hover:shadow-lg">
       <CardContent className="p-6">
         {/* Session Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-3 flex-wrap">
-              <Badge className="bg-[#0B7186]/10 text-[#0B7186] border border-[#0B7186]/20 font-medium px-3 py-1">
+              <Badge className="rounded-md border border-[#0B7186]/20 bg-[#0B7186]/10 px-3 py-1 font-medium text-[#0B7186]">
                 <MapPin className="w-3 h-3 mr-1 inline" />
                 {session.venueHall}
               </Badge>
               {session.theme && (
                 <Badge
                   variant="outline"
-                  className="border-[#FFB803] text-[#FFB803] bg-[#FFB803]/5 font-medium px-3 py-1"
+                  className="rounded-md border-[#FFB803]/40 bg-[#FFB803]/10 px-3 py-1 font-medium text-[#8A6200]"
                 >
                   {session.theme}
                 </Badge>
@@ -37,7 +37,7 @@ export default function SessionCard({ session }) {
 
         {/* Organizer */}
         {session.organizer && (
-          <div className="mb-4 flex items-center text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
+          <div className="mb-4 flex items-center rounded-lg bg-slate-50 px-3 py-2 text-sm text-gray-600">
             <Building className="w-4 h-4 mr-2 text-[#0B7186] flex-shrink-0" />
             <span className="font-medium">{session.organizer}</span>
           </div>
@@ -58,12 +58,12 @@ export default function SessionCard({ session }) {
                 {expanded ? (
                   <>
                     <span>Show less</span>
-                    <span className="text-xs">↑</span>
+                    <ChevronUp className="h-3.5 w-3.5" />
                   </>
                 ) : (
                   <>
                     <span>Read more</span>
-                    <span className="text-xs">→</span>
+                    <ChevronRight className="h-3.5 w-3.5" />
                   </>
                 )}
               </button>

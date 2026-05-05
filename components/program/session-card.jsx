@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { MapPin, Building, Users } from "lucide-react"
+import { sanitizeRichHtml } from "@/lib/sanitize-html"
 
 export default function SessionCard({ session }) {
   const [expanded, setExpanded] = useState(false)
@@ -47,7 +48,7 @@ export default function SessionCard({ session }) {
           <div className="mb-4">
             <div
               className={`rich-text-content text-sm text-gray-700 leading-relaxed ${!expanded ? "line-clamp-3" : ""}`}
-              dangerouslySetInnerHTML={{ __html: session.preamble }}
+              dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(session.preamble) }}
             />
             {session.preamble.length > 200 && (
               <button
@@ -79,7 +80,7 @@ export default function SessionCard({ session }) {
               </div>
               <div
                 className="rich-text-content text-sm text-gray-700 flex-1"
-                dangerouslySetInnerHTML={{ __html: session.speakers }}
+                dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(session.speakers) }}
               />
             </div>
           </div>

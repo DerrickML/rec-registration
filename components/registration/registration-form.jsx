@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -25,7 +26,6 @@ import {
   ArrowLeft,
   Globe,
   BadgeIcon as IdCard,
-  Plus,
   Minus,
   Users,
   Store,
@@ -46,12 +46,16 @@ export default function RegistrationForm() {
 
   // Form data
   const [email, setEmail] = useState("")
-  const [existingUser, setExistingUser] = useState(null)
   const [couponCode, setCouponCode] = useState("")
   const [couponData, setCouponData] = useState(null)
   const [isEditing, setIsEditing] = useState(false)
+  const [awaitingOtp, setAwaitingOtp] = useState(false)
+  const [otpCode, setOtpCode] = useState("")
+  const [editToken, setEditToken] = useState("")
+  const [emailVerificationMode, setEmailVerificationMode] = useState("new")
   const [registrationType, setRegistrationType] = useState("Attendee")
   const [exhibitorCapacity, setExhibitorCapacity] = useState(null)
+  const [couponRequired, setCouponRequired] = useState(false)
 
   const [conference, setConference] = useState(null)
   const [registrationClosed, setRegistrationClosed] = useState(false)
@@ -114,7 +118,13 @@ export default function RegistrationForm() {
     const fetchConference = async () => {
       try {
         const activeConference = await apiService.getActiveConference()
+        if (!activeConference) {
+          setRegistrationClosed(true)
+          setError("Registration is unavailable because no active conference is configured.")
+          return
+        }
         setConference(activeConference)
+        setCouponRequired(activeConference.couponRequired === true)
 
         // Check registration status
         if (!activeConference.registrationOpen) {
@@ -122,6 +132,8 @@ export default function RegistrationForm() {
         }
       } catch (err) {
         console.error("Failed to fetch conference:", err)
+        setRegistrationClosed(true)
+        setError("Registration is unavailable. Please try again later or contact support.")
       } finally {
         setCheckingStatus(false)
       }
@@ -145,7 +157,11 @@ export default function RegistrationForm() {
     const checkCapacity = async () => {
       if (registrationType === "Exhibitor") {
         try {
-          const capacity = await apiService.checkExhibitorCapacity()
+          const response = await fetch("/api/registration/exhibitor-capacity")
+          const capacity = await response.json()
+          if (!response.ok) {
+            throw new Error(capacity.error || "Failed to check exhibitor capacity")
+          }
           setExhibitorCapacity(capacity)
         } catch (err) {
           console.error("Failed to check exhibitor capacity:", err)
@@ -159,12 +175,16 @@ export default function RegistrationForm() {
   const resetForm = () => {
     setCurrentStep(1)
     setEmail("")
-    setExistingUser(null)
     setCouponCode("")
     setCouponData(null)
     setIsEditing(false)
+    setAwaitingOtp(false)
+    setOtpCode("")
+    setEditToken("")
+    setEmailVerificationMode("new")
     setRegistrationType("Attendee")
     setExhibitorCapacity(null)
+    setCouponRequired(conference?.couponRequired === true)
     setExhibitorMembers([
       {
         title: "",
@@ -239,133 +259,26 @@ export default function RegistrationForm() {
     setError("")
 
     try {
-      const existingRecord = await apiService.checkEmailExists(email)
+      const response = await fetch("/api/registration/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to verify email")
+      }
 
-      if (existingRecord) {
-        setExistingUser(existingRecord)
-        // Show edit confirmation dialog
-        const shouldEdit = window.confirm("This email is already registered. Would you like to edit your registration?")
-
-        if (!shouldEdit) {
-          setLoading(false)
-          return
-        }
-
-        // Helper function to filter out Appwrite system attributes
-        const filterSystemAttributes = (data) => {
-          const filtered = {}
-          Object.keys(data).forEach((key) => {
-            // Skip Appwrite system attributes that start with $
-            if (!key.startsWith("$")) {
-              filtered[key] = data[key]
-            }
-            if (key === "visaLetterSent") {
-              // remove visaLetterSent if it exists
-              delete filtered.visaLetterSent
-            }
-          })
-          return filtered
-        }
-
-        // Pre-fill form with existing data and jump to step 4
-        setIsEditing(true)
-        const cleanedData = filterSystemAttributes(existingRecord)
-
-        // Helper function to ensure all values are strings or empty strings (never null)
-        const sanitizeFormData = (data) => {
-          const sanitized = {}
-          Object.keys(data).forEach((key) => {
-            if (data[key] === null || data[key] === undefined) {
-              sanitized[key] = ""
-            } else if (Array.isArray(data[key])) {
-              sanitized[key] = data[key]
-            } else {
-              sanitized[key] = String(data[key])
-            }
-          })
-          return sanitized
-        }
-
-        if(registrationType === "Attendee"){
-          setFormData({
-            ...sanitizeFormData(cleanedData),
-            email: existingRecord.email || "",
-            // Ensure arrays are properly handled
-            daysAttending: Array.isArray(existingRecord.daysAttending) ? existingRecord.daysAttending : [],
-            sector: Array.isArray(existingRecord.sector) ? existingRecord.sector : [],
-            conferenceYears: Array.isArray(existingRecord.conferenceYears) ? existingRecord.conferenceYears : [2025],
-          })  
-        }
-        else if(registrationType === "Exhibitor"){
-          // For exhibitors, we need to ensure the form is pre-filled correctly
-          // and that we handle the existing members properly
-          // For now, we will just pre-fill the first member since that's the only one returned by the API
-          setExhibitorMembers([
-            {
-              title: existingRecord.title || "",
-              firstName: existingRecord.firstName || "",
-              lastName: existingRecord.lastName || "",
-              otherName: existingRecord.otherName || "",
-              email: existingRecord.email || "",
-              otherEmail: existingRecord.otherEmail || "",
-              phone: existingRecord.phone || "",
-              otherPhone: existingRecord.otherPhone || "",
-            },
-          ])
-
-          // Pre-fill the shared data for exhibitors
-          setFormData({
-            ...sanitizeFormData(cleanedData),
-            email: existingRecord.email || "",
-            organization: existingRecord.organization || "",
-            sector: Array.isArray(existingRecord.sector) ? existingRecord.sector : [],
-            city: existingRecord.city || "",
-            stateRegion: existingRecord.stateRegion || "",
-            country: existingRecord.country || "",
-            visaLetterRequired: existingRecord.visaLetterRequired || false,
-            additionalComments: existingRecord.additionalComments || "",
-            daysAttending: Array.isArray(existingRecord.daysAttending) ? existingRecord.daysAttending : [],
-            eventStart: existingRecord.eventStart || "2025-10-20T09:00:00Z",
-            eventEnd: existingRecord.eventEnd || "2025-10-22T18:00:00Z",
-            passportNumber: existingRecord.passportNumber || "",
-            exhibitionDetails: existingRecord.exhibitionDetails || "",
-          })
-        }
-        else {
-          // For sponsors, we can pre-fill the form similarly
-          setFormData({
-            ...sanitizeFormData(cleanedData),
-            email: existingRecord.email || "",
-            organization: existingRecord.organization || "",
-            sector: Array.isArray(existingRecord.sector) ? existingRecord.sector : [],
-            city: existingRecord.city || "",
-            stateRegion: existingRecord.stateRegion || "",
-            country: existingRecord.country || "",
-            visaLetterRequired: existingRecord.visaLetterRequired || false,
-            additionalComments: existingRecord.additionalComments || "",
-            daysAttending: Array.isArray(existingRecord.daysAttending) ? existingRecord.daysAttending : [],
-            eventStart: existingRecord.eventStart || "2025-10-20T09:00:00Z",
-            eventEnd: existingRecord.eventEnd || "2025-10-22T18:00:00Z",
-            passportNumber: existingRecord.passportNumber || "",
-          })
-        }
-        // Set registration type based on existing record
-        setRegistrationType(existingRecord.registrationType || "Attendee")
-        setCurrentStep(4) // Skip to registration details
-      } else {
-        // New user, proceed to step 3 (coupon) or step 4 (registration details)
-        setFormData((prev) => ({ ...prev, email, registrationType }))
-
-        // Pre-fill first exhibitor member email with the validated email
-        if (registrationType === "Exhibitor") {
-          setExhibitorMembers((prev) => {
-            const updated = [...prev]
-            updated[0] = { ...updated[0], email }
-            return updated
-          })
-        }
-
-        setCurrentStep(3) // Go to coupon step for all types
+      if (result.status === "otp_required") {
+        setAwaitingOtp(true)
+        setOtpCode("")
+        setIsEditing(false)
+        setEditToken("")
+        setEmailVerificationMode(result.mode || "new")
+        setCouponRequired(result.couponRequired === true)
+        setFormData((prev) => ({ ...prev, email: result.email }))
+        setEmail(result.email)
+        setCurrentStep(3)
       }
     } catch (err) {
       setError(err.message)
@@ -374,18 +287,26 @@ export default function RegistrationForm() {
     }
   }
 
-  // Step 3: Coupon Validation (Optional for Exhibitors)
-  const handleCouponSubmit = async (e) => {
+  const sanitizeFormData = (data) => {
+    const sanitized = {}
+    Object.keys(data || {}).forEach((key) => {
+      if (data[key] === null || data[key] === undefined) {
+        sanitized[key] = ""
+      } else if (Array.isArray(data[key])) {
+        sanitized[key] = data[key]
+      } else if (typeof data[key] === "boolean") {
+        sanitized[key] = data[key]
+      } else {
+        sanitized[key] = String(data[key])
+      }
+    })
+    return sanitized
+  }
+
+  const handleOtpSubmit = async (e) => {
     e.preventDefault()
-
-    // Allow skipping coupon for exhibitors if they don't have one
-    if (registrationType === "Exhibitor" && !couponCode.trim()) {
-      setCurrentStep(4)
-      return
-    }
-
-    if (!couponCode.trim()) {
-      setError("Please enter a coupon code")
+    if (!otpCode.trim()) {
+      setError("Please enter the verification code")
       return
     }
 
@@ -393,21 +314,73 @@ export default function RegistrationForm() {
     setError("")
 
     try {
-      const result = await apiService.validateCoupon(couponCode, registrationType)
+      const response = await fetch("/api/registration/verify-edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp: otpCode }),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to verify code")
+      }
 
-      if (!result.valid) {
-        setError(result.error)
-        setLoading(false)
+      if (result.status === "verified_new") {
+        setIsEditing(false)
+        setAwaitingOtp(false)
+        setEditToken(result.editToken)
+        setCouponRequired(result.couponRequired === true)
+        setFormData((prev) => ({
+          ...prev,
+          email: result.email,
+          registrationType,
+          ...(result.conferenceDefaults || {}),
+        }))
+
+        if (registrationType === "Exhibitor") {
+          setExhibitorMembers((prev) => {
+            const updated = [...prev]
+            updated[0] = { ...updated[0], email: result.email }
+            return updated
+          })
+        }
+
+        setCurrentStep(3)
         return
       }
 
-      setCouponData(result.data)
+      const existingRecord = sanitizeFormData(result.registrant || {})
+      const existingType = existingRecord.registrationType || "Attendee"
+      setIsEditing(true)
+      setAwaitingOtp(false)
+      setEditToken(result.editToken)
+      setCouponRequired(result.couponRequired === true)
+      setRegistrationType(existingType)
+
       setFormData((prev) => ({
         ...prev,
-        organization: result.data.organization,
-        sector: Array.isArray(result.data.sector) ? result.data.sector : [result.data.sector],
-        coupon: couponCode,
+        ...existingRecord,
+        email: result.email || existingRecord.email || "",
+        registrationType: existingType,
+        daysAttending: Array.isArray(existingRecord.daysAttending) ? existingRecord.daysAttending : [],
+        sector: Array.isArray(existingRecord.sector) ? existingRecord.sector : [],
+        conferenceYears: Array.isArray(existingRecord.conferenceYears) ? existingRecord.conferenceYears : prev.conferenceYears,
       }))
+
+      if (existingType === "Exhibitor") {
+        setExhibitorMembers([
+          {
+            title: existingRecord.title || "",
+            firstName: existingRecord.firstName || "",
+            lastName: existingRecord.lastName || "",
+            otherName: existingRecord.otherName || "",
+            email: result.email || existingRecord.email || "",
+            otherEmail: existingRecord.otherEmail || "",
+            phone: existingRecord.phone || "",
+            otherPhone: existingRecord.otherPhone || "",
+          },
+        ])
+      }
+
       setCurrentStep(4)
     } catch (err) {
       setError(err.message)
@@ -416,22 +389,51 @@ export default function RegistrationForm() {
     }
   }
 
-  // Add exhibitor member
-  const addExhibitorMember = () => {
-    if (exhibitorMembers.length < 2) {
-      setExhibitorMembers([
-        ...exhibitorMembers,
-        {
-          title: "",
-          firstName: "",
-          lastName: "",
-          otherName: "",
-          email: "",
-          otherEmail: "",
-          phone: "",
-          otherPhone: "",
-        },
-      ])
+  // Step 3: Coupon validation
+  const handleCouponSubmit = async (e) => {
+    e.preventDefault()
+
+    if (!couponCode.trim()) {
+      if (couponRequired) {
+        setError("Please enter a coupon code")
+        return
+      }
+
+      setCouponData(null)
+      setFormData((prev) => ({
+        ...prev,
+        coupon: "",
+      }))
+      setCurrentStep(4)
+      return
+    }
+
+    setLoading(true)
+    setError("")
+
+    try {
+      const response = await fetch("/api/registration/coupon-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ couponCode, registrationType }),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to validate coupon")
+      }
+
+      setCouponData(result.coupon)
+      setFormData((prev) => ({
+        ...prev,
+        organization: result.coupon.organization,
+        sector: Array.isArray(result.coupon.sector) ? result.coupon.sector : [result.coupon.sector],
+        coupon: couponCode,
+      }))
+      setCurrentStep(4)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -502,83 +504,26 @@ export default function RegistrationForm() {
     setLoading(true)
     setError("")
 
-    // Helper function to convert empty strings to null
-    const cleanDataForDatabase = (data) => {
-      const cleaned = { ...data }
-      Object.keys(cleaned).forEach((key) => {
-        if (typeof cleaned[key] === "string" && cleaned[key].trim() === "") {
-          cleaned[key] = null
-        }
-        // Handle arrays - if empty array, keep as empty array, don't convert to null
-        if (Array.isArray(cleaned[key]) && cleaned[key].length === 0) {
-          // Keep empty arrays as they are for fields like daysAttending, sector, etc.
-        }
-      })
-      return cleaned
-    }
-
     try {
+      const payload = {
+        ...formData,
+        email: formData.email || email,
+        registrationType,
+        couponCode: formData.coupon || couponCode,
+        editToken,
+      }
       if (registrationType === "Exhibitor") {
-        // Create shared data for all exhibitor members
-        const sharedData = cleanDataForDatabase({
-          organization: formData.organization,
-          sector: formData.sector,
-          city: formData.city,
-          stateRegion: formData.stateRegion,
-          country: formData.country,
-          visaLetterRequired: formData.visaLetterRequired,
-          additionalComments: formData.additionalComments,
-          daysAttending: formData.daysAttending,
-          eventStart: formData.eventStart,
-          eventEnd: formData.eventEnd,
-          passportNumber: formData.passportNumber,
-          exhibitionDetails: formData.exhibitionDetails,
-          coupon: formData.coupon,
-          conferenceYears: formData.conferenceYears,
-        })
+        payload.members = exhibitorMembers
+      }
 
-        // Clean member data
-        const cleanedMembers = exhibitorMembers.map((member) => cleanDataForDatabase(member))
-
-        // Create exhibitor members
-        await apiService.createExhibitorMembers(cleanedMembers, sharedData)
-
-        // Send confirmation emails
-        await apiService.sendExhibitorConfirmationEmails(
-          cleanedMembers,
-          sharedData,
-          formData.conferenceYears[formData.conferenceYears.length - 1],
-        )
-
-        // Decrement coupon usage by number of members
-        if (couponData) {
-          await apiService.decrementCouponUsage(couponData.$id, couponData.usersLeft, exhibitorMembers.length)
-        }
-      } else {
-        // Regular registration
-        const registrationData = cleanDataForDatabase({
-          ...formData,
-        })
-
-        if (isEditing && existingUser) {
-          // Update existing registration
-          await apiService.updateRegistrant(existingUser.$id, registrationData)
-        } else {
-          // Create new registration
-          await apiService.createRegistrant(registrationData)
-
-          // Decrement coupon usage only for new registrations
-          if (couponData) {
-            await apiService.decrementCouponUsage(couponData.$id, couponData.usersLeft)
-          }
-        }
-
-        // Send confirmation email
-        await apiService.sendConfirmationEmail(
-          registrationData,
-          registrationData.conferenceYears[registrationData.conferenceYears.length - 1],
-          null,
-        )
+      const response = await fetch("/api/registration/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to submit registration")
       }
 
       setSuccess(true)
@@ -637,18 +582,11 @@ export default function RegistrationForm() {
           </p>
           
           <div className="space-y-4">
-            <Button
-              onClick={() => (window.location.href = "/")}
-              className="bg-[#0B7186] hover:bg-[#054653] text-white px-6 h-11 font-semibold rounded-xl shadow-md w-full"
-            >
-              Back to Home
+            <Button asChild className="bg-[#0B7186] hover:bg-[#054653] text-white px-6 h-11 font-semibold rounded-xl shadow-md w-full">
+              <Link href="/">Back to Home</Link>
             </Button>
-            <Button
-              onClick={() => (window.location.href = "/program")}
-              variant="outline"
-              className="border-2 border-[#0B7186] text-[#0B7186] hover:bg-[#0B7186] hover:text-white px-6 h-11 font-semibold rounded-xl w-full"
-            >
-              View Program
+            <Button asChild variant="outline" className="border-2 border-[#0B7186] text-[#0B7186] hover:bg-[#0B7186] hover:text-white px-6 h-11 font-semibold rounded-xl w-full">
+              <Link href="/program">View Program</Link>
             </Button>
           </div>
 
@@ -687,7 +625,7 @@ export default function RegistrationForm() {
   const steps = [
     { number: 1, title: "Type", icon: User, description: "Registration type" },
     { number: 2, title: "Email", icon: Mail, description: "Verify your email" },
-    { number: 3, title: "Coupon", icon: Ticket, description: "Enter coupon code" },
+    { number: 3, title: "Coupon", icon: Ticket, description: couponRequired ? "Enter coupon code" : "Optional coupon" },
     { number: 4, title: "Details", icon: Building, description: "Complete details" },
   ]
 
@@ -964,38 +902,47 @@ export default function RegistrationForm() {
             </div>
           )}
 
-          {/* Step 3: Coupon Validation */}
+          {/* Step 3: OTP Verification or Coupon Validation */}
           {currentStep === 3 && (
             <div className="animate-in slide-in-from-right duration-500">
               <Card className="bg-white/95 backdrop-blur-sm border-gray-200 shadow-xl">
                 <CardHeader className="text-center pb-8">
                   <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-r from-[#0B7186] to-[#FFB803] rounded-full mb-4 mx-auto">
-                    <Ticket className="w-6 h-6 text-white" />
+                    {awaitingOtp ? <Mail className="w-6 h-6 text-white" /> : <Ticket className="w-6 h-6 text-white" />}
                   </div>
-                  <CardTitle className="text-2xl sm:text-3xl font-bold text-gray-800">Coupon Code</CardTitle>
+                  <CardTitle className="text-2xl sm:text-3xl font-bold text-gray-800">
+                    {awaitingOtp ? "Verify Email" : "Coupon Code"}
+                  </CardTitle>
                   <CardDescription className="text-gray-600 text-lg">
-                    {registrationType === "Exhibitor"
-                      ? "Enter your organization's coupon code if available (optional)"
-                      : "Enter your organization's coupon code to proceed"}
+                    {awaitingOtp
+                      ? emailVerificationMode === "edit"
+                        ? "Enter the verification code sent to your email address to edit your registration"
+                        : "Enter the verification code sent to your email address to continue"
+                      : couponRequired
+                        ? "Enter your organization's coupon code to proceed"
+                        : "Enter a coupon code if you have one, or continue without one"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <form onSubmit={handleCouponSubmit} className="space-y-6">
+                  <form onSubmit={awaitingOtp ? handleOtpSubmit : handleCouponSubmit} className="space-y-6">
                     <div className="space-y-2">
-                      <Label htmlFor="coupon" className="text-gray-700 font-medium">
-                        {/* Coupon Code {registrationType !== "Exhibitor" && "*"} */}
-                        Coupon Code *
+                      <Label htmlFor={awaitingOtp ? "otp" : "coupon"} className="text-gray-700 font-medium">
+                        {awaitingOtp ? "Verification Code *" : `Coupon Code${couponRequired ? " *" : ""}`}
                       </Label>
                       <div className="relative">
-                        <Ticket className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        {awaitingOtp ? (
+                          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        ) : (
+                          <Ticket className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        )}
                         <Input
-                          id="coupon"
-                          value={couponCode}
-                          onChange={(e) => setCouponCode(e.target.value)}
-                          placeholder="Enter coupon code"
+                          id={awaitingOtp ? "otp" : "coupon"}
+                          value={awaitingOtp ? otpCode : couponCode}
+                          onChange={(e) => (awaitingOtp ? setOtpCode(e.target.value) : setCouponCode(e.target.value))}
+                          placeholder={awaitingOtp ? "Enter 6-digit code" : "Enter coupon code"}
                           className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186] focus:ring-[#0B7186]/20"
-                          // required={registrationType !== "Exhibitor"}
-                          required={true} // EXHIB Always require for now
+                          inputMode={awaitingOtp ? "numeric" : undefined}
+                          required={awaitingOtp || couponRequired}
                         />
                       </div>
                     </div>
@@ -1017,11 +964,15 @@ export default function RegistrationForm() {
                         {loading ? (
                           <>
                             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                            Validating...
+                            {awaitingOtp ? "Verifying..." : "Validating..."}
                           </>
                         ) : (
                           <>
-                            Continue
+                            {awaitingOtp
+                              ? "Verify"
+                              : couponRequired || couponCode.trim()
+                                ? "Apply Coupon"
+                                : "Continue Without Coupon"}
                             <ArrowRight className="ml-2 h-5 w-5" />
                           </>
                         )}

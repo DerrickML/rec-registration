@@ -132,6 +132,12 @@ async function verifiedNewRegistrationToken(svc, email = "new@example.com") {
   return verified.editToken
 }
 
+async function verifiedExistingRegistrationToken(svc, email) {
+  await svc.start({ email })
+  const verified = await svc.verifyEdit({ email, otp: "123456" })
+  return verified.editToken
+}
+
 describe("registration service", () => {
   it("fails closed when the active conference is closed", async () => {
     const db = createDb({ conferences: [activeConference({ registrationOpen: false })] })
@@ -176,7 +182,7 @@ describe("registration service", () => {
       status: "otp_required",
       email: "old@example.com",
       couponRequired: false,
-      mode: "edit",
+      mode: "existing",
       message: "A verification code has been sent to your email address.",
     })
     expect(result.registrant).toBeUndefined()
@@ -186,7 +192,7 @@ describe("registration service", () => {
   it("rejects wrong OTP attempts and verifies the correct code", async () => {
     const db = createDb({
       conferences: [activeConference()],
-      registrants: [{ $id: "reg1", email: "old@example.com", firstName: "Old" }],
+      registrants: [{ $id: "reg1", email: "old@example.com", firstName: "Old", conferenceYears: [2025] }],
     })
     const svc = service(db)
 
@@ -198,7 +204,29 @@ describe("registration service", () => {
     const verified = await svc.verifyEdit({ email: "old@example.com", otp: "123456" })
     expect(verified.status).toBe("verified")
     expect(verified.editToken).toBe("edit-token")
+    expect(verified.registrationMode).toBe("edit-current")
+    expect(verified.alreadyRegisteredForCurrentConference).toBe(true)
+    expect(verified.activeConferenceYear).toBe(2025)
     expect(verified.registrant.email).toBe("old@example.com")
+    expect(verified.registrant.conferenceYears).toEqual([2025])
+  })
+
+  it("marks existing emails from past conferences as returning current-conference registrations", async () => {
+    const db = createDb({
+      conferences: [activeConference()],
+      registrants: [{ $id: "reg1", email: "old@example.com", firstName: "Old", conferenceYears: [2024] }],
+    })
+    const svc = service(db)
+
+    await svc.start({ email: "old@example.com" })
+    const verified = await svc.verifyEdit({ email: "old@example.com", otp: "123456" })
+
+    expect(verified.status).toBe("verified")
+    expect(verified.registrationMode).toBe("returning-current")
+    expect(verified.alreadyRegisteredForCurrentConference).toBe(false)
+    expect(verified.activeConferenceYear).toBe(2025)
+    expect(verified.conferenceDefaults.conferenceYears).toEqual([2025])
+    expect(verified.registrant.conferenceYears).toEqual([2024])
   })
 
   it("creates a new attendee and decrements coupon once", async () => {
@@ -255,6 +283,79 @@ describe("registration service", () => {
       status: 400,
     })
     expect(db.tables.registrants).toHaveLength(0)
+  })
+
+  it("updates an existing active-year registration without requiring or redeeming a coupon", async () => {
+    const db = createDb({
+      conferences: [activeConference({ couponRequired: true })],
+      registrants: [
+        {
+          $id: "reg1",
+          email: "old@example.com",
+          conferenceYears: [2025],
+          coupon: "PREVIOUS",
+          registrationType: "Attendee",
+        },
+      ],
+      coupons: [{ $id: "coupon1", coupon: "SAVE10", type: "Attendee", usersLeft: 2, organization: "Org", sector: "Solar" }],
+    })
+
+    const svc = service(db)
+    const editToken = await verifiedExistingRegistrationToken(svc, "old@example.com")
+    const result = await svc.submit(attendeeInput({ email: "old@example.com", couponCode: "", editToken }))
+
+    expect(result.status).toBe("registered")
+    expect(db.tables.registrants).toHaveLength(1)
+    expect(db.tables.registrants[0].conferenceYears).toEqual([2025])
+    expect(db.tables.registrants[0].coupon).toBe("PREVIOUS")
+    expect(db.tables.coupons[0].usersLeft).toBe(2)
+  })
+
+  it("requires a coupon when an old registration is added to the active conference year", async () => {
+    const db = createDb({
+      conferences: [activeConference({ couponRequired: true })],
+      registrants: [
+        {
+          $id: "reg1",
+          email: "old@example.com",
+          conferenceYears: [2024],
+          registrationType: "Attendee",
+        },
+      ],
+    })
+
+    const svc = service(db)
+    const editToken = await verifiedExistingRegistrationToken(svc, "old@example.com")
+
+    await expect(
+      svc.submit(attendeeInput({ email: "old@example.com", couponCode: "", editToken }))
+    ).rejects.toMatchObject({ status: 400 })
+    expect(db.tables.registrants[0].conferenceYears).toEqual([2024])
+  })
+
+  it("redeems a coupon once when an old registration is added to the active conference year", async () => {
+    const db = createDb({
+      conferences: [activeConference({ couponRequired: true })],
+      registrants: [
+        {
+          $id: "reg1",
+          email: "old@example.com",
+          conferenceYears: [2024],
+          registrationType: "Attendee",
+        },
+      ],
+      coupons: [{ $id: "coupon1", coupon: "SAVE10", type: "Attendee", usersLeft: 2, organization: "Org", sector: "Solar" }],
+    })
+
+    const svc = service(db)
+    const editToken = await verifiedExistingRegistrationToken(svc, "old@example.com")
+    const result = await svc.submit(attendeeInput({ email: "old@example.com", editToken }))
+
+    expect(result.status).toBe("registered")
+    expect(db.tables.registrants).toHaveLength(1)
+    expect(db.tables.registrants[0].conferenceYears).toEqual([2024, 2025])
+    expect(db.tables.registrants[0].coupon).toBe("SAVE10")
+    expect(db.tables.coupons[0].usersLeft).toBe(1)
   })
 
   it("rejects coupon oversell", async () => {

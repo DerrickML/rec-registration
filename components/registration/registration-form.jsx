@@ -61,6 +61,7 @@ export default function RegistrationForm() {
   const [otpResendCooldown, setOtpResendCooldown] = useState(0)
   const [editToken, setEditToken] = useState("")
   const [emailVerificationMode, setEmailVerificationMode] = useState("new")
+  const [registrationFlow, setRegistrationFlow] = useState("new")
   const [registrationType, setRegistrationType] = useState("Attendee")
   const [exhibitorCapacity, setExhibitorCapacity] = useState(null)
   const [couponRequired, setCouponRequired] = useState(false)
@@ -205,6 +206,7 @@ export default function RegistrationForm() {
     setOtpResendCooldown(0)
     setEditToken("")
     setEmailVerificationMode("new")
+    setRegistrationFlow("new")
     setRegistrationType("Attendee")
     setExhibitorCapacity(null)
     setCouponRequired(conference?.couponRequired === true)
@@ -299,6 +301,7 @@ export default function RegistrationForm() {
         setAwaitingOtp(true)
         setOtpCode("")
         setIsEditing(false)
+        setRegistrationFlow(result.mode === "existing" ? "pending-existing" : "new")
         setEditToken("")
         setEmailVerificationMode(result.mode || "new")
         setCouponRequired(result.couponRequired === true)
@@ -320,6 +323,7 @@ export default function RegistrationForm() {
     setOtpResendCooldown(0)
     setEditToken("")
     setEmailVerificationMode("new")
+    setRegistrationFlow("new")
     setFormData((prev) => ({ ...prev, email: "" }))
     setCurrentStep(2)
     setError("")
@@ -345,6 +349,7 @@ export default function RegistrationForm() {
 
       setOtpCode("")
       setEmailVerificationMode(result.mode || emailVerificationMode)
+      setRegistrationFlow(result.mode === "existing" ? "pending-existing" : "new")
       setCouponRequired(result.couponRequired === true)
       setOtpResendCooldown(60)
     } catch (err) {
@@ -374,6 +379,34 @@ export default function RegistrationForm() {
     return sanitized
   }
 
+  const buildReturningFormData = ({ existingRecord, existingType, emailAddress, defaults, previous }) => ({
+    ...previous,
+    email: emailAddress || existingRecord.email || "",
+    registrationType: existingType,
+    conferenceYears: Array.isArray(defaults?.conferenceYears) ? defaults.conferenceYears : previous.conferenceYears,
+    eventStart: defaults?.eventStart || previous.eventStart,
+    eventEnd: defaults?.eventEnd || previous.eventEnd,
+    title: existingRecord.title || "",
+    firstName: existingRecord.firstName || "",
+    lastName: existingRecord.lastName || "",
+    otherName: existingRecord.otherName || "",
+    phone: existingRecord.phone || "",
+    otherPhone: existingRecord.otherPhone || "",
+    otherEmail: existingRecord.otherEmail || "",
+    organization: existingRecord.organization || "",
+    sector: Array.isArray(existingRecord.sector) ? existingRecord.sector : [],
+    city: existingRecord.city || "",
+    stateRegion: existingRecord.stateRegion || "",
+    country: existingRecord.country || "",
+    visaLetterRequired: false,
+    additionalComments: "",
+    daysAttending: [],
+    passportNumber: "",
+    visaLetterSent: false,
+    exhibitionDetails: "",
+    coupon: "",
+  })
+
   const handleOtpSubmit = async (e) => {
     e.preventDefault()
     if (!otpCode.trim()) {
@@ -398,6 +431,7 @@ export default function RegistrationForm() {
 
       if (result.status === "verified_new") {
         setIsEditing(false)
+        setRegistrationFlow("new")
         setAwaitingOtp(false)
         setEditToken(result.editToken)
         setCouponRequired(result.couponRequired === true)
@@ -422,21 +456,38 @@ export default function RegistrationForm() {
 
       const existingRecord = sanitizeFormData(result.registrant || {})
       const existingType = existingRecord.registrationType || "Attendee"
-      setIsEditing(true)
+      const nextRegistrationFlow = result.registrationMode || "edit-current"
+      const isActiveYearEdit = nextRegistrationFlow === "edit-current"
+      setIsEditing(isActiveYearEdit)
+      setRegistrationFlow(nextRegistrationFlow)
       setAwaitingOtp(false)
       setEditToken(result.editToken)
       setCouponRequired(result.couponRequired === true)
       setRegistrationType(existingType)
+      setCouponCode("")
+      setCouponData(null)
 
-      setFormData((prev) => ({
-        ...prev,
-        ...existingRecord,
-        email: result.email || existingRecord.email || "",
-        registrationType: existingType,
-        daysAttending: Array.isArray(existingRecord.daysAttending) ? existingRecord.daysAttending : [],
-        sector: Array.isArray(existingRecord.sector) ? existingRecord.sector : [],
-        conferenceYears: Array.isArray(existingRecord.conferenceYears) ? existingRecord.conferenceYears : prev.conferenceYears,
-      }))
+      setFormData((prev) => {
+        if (!isActiveYearEdit) {
+          return buildReturningFormData({
+            existingRecord,
+            existingType,
+            emailAddress: result.email,
+            defaults: result.conferenceDefaults,
+            previous: prev,
+          })
+        }
+
+        return {
+          ...prev,
+          ...existingRecord,
+          email: result.email || existingRecord.email || "",
+          registrationType: existingType,
+          daysAttending: Array.isArray(existingRecord.daysAttending) ? existingRecord.daysAttending : [],
+          sector: Array.isArray(existingRecord.sector) ? existingRecord.sector : [],
+          conferenceYears: Array.isArray(existingRecord.conferenceYears) ? existingRecord.conferenceYears : prev.conferenceYears,
+        }
+      })
 
       if (existingType === "Exhibitor") {
         setExhibitorMembers([
@@ -549,7 +600,11 @@ export default function RegistrationForm() {
 
     if (!isEditing && couponRequired && !formData.coupon) {
       setFieldErrors({ coupon: "Please apply your coupon code before submitting" })
-      setError("Please apply your coupon code before submitting your registration")
+      setError(
+        isReturningRegistration
+          ? "Please apply a valid coupon code before registering for the current conference."
+          : "Please apply your coupon code before submitting your registration"
+      )
       return
     }
 
@@ -750,7 +805,7 @@ export default function RegistrationForm() {
     { number: 1, title: "Type", icon: User, description: "Registration type" },
     { number: 2, title: "Email", icon: Mail, description: "Verify your email" },
     { number: 3, title: "Verify", icon: Mail, description: "Enter code" },
-    { number: 4, title: "Details", icon: Building, description: "Complete details" },
+    { number: 4, title: "Details", icon: Building, description: "Current conference" },
   ]
 
   const conferenceDays = conference?.days
@@ -769,6 +824,22 @@ export default function RegistrationForm() {
         { label: "21st October – Day 2", theme: "Technology & Innovation" },
         { label: "22nd October – Day 3", theme: "Implementation & Sustainability" },
       ]
+
+  const activeConferenceYear = conference?.startDate
+    ? new Date(conference.startDate).getFullYear()
+    : currentYear
+  const conferenceLabel = conference?.shortName || conference?.title || `${activeConferenceYear} conference`
+  const isReturningRegistration = registrationFlow === "returning-current"
+  const detailsTitle = isEditing
+    ? "Update Current Conference Registration"
+    : isReturningRegistration
+      ? `Register for ${conferenceLabel}`
+      : `Complete ${registrationType} Registration`
+  const detailsDescription = isEditing
+    ? "Update the registration already tied to this conference."
+    : isReturningRegistration
+      ? "We found your previous profile. Confirm the current conference details below to register for this edition."
+      : "Fill in your details to secure your spot."
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30 relative overflow-hidden">
@@ -796,7 +867,7 @@ export default function RegistrationForm() {
               {conference?.title || "REC25 & EXPO"}
             </h1>
             <p className="text-gray-500 max-w-lg mx-auto">
-              Register now for the most anticipated renewable energy event.
+              Register for {conferenceLabel}. Returning participants will be guided into the correct current-conference flow after email verification.
             </p>
           </div>
 
@@ -965,7 +1036,7 @@ export default function RegistrationForm() {
                   </div>
                   <CardTitle className="text-2xl sm:text-3xl font-bold text-gray-800">Email Verification</CardTitle>
                   <CardDescription className="text-gray-600 text-lg">
-                    Enter your email address to begin your registration journey
+                    Enter your email address to begin. If you registered before, we will verify it and show the correct current-conference flow.
                   </CardDescription>
                   {registrationType && (
                     <Badge variant="secondary" className="bg-[#0B7186]/10 text-[#0B7186] border-[#0B7186]/20 mt-4">
@@ -1037,8 +1108,8 @@ export default function RegistrationForm() {
                   </div>
                   <CardTitle className="text-2xl sm:text-3xl font-bold text-gray-800">Verify Email</CardTitle>
                   <CardDescription className="text-gray-600 text-lg">
-                    {emailVerificationMode === "edit"
-                      ? "Enter the verification code sent to your email address to edit your registration"
+                    {emailVerificationMode === "existing"
+                      ? `Enter the verification code so we can safely continue with your ${conferenceLabel} registration.`
                       : "Enter the verification code sent to your email address to continue"}
                   </CardDescription>
                   <p className="text-sm text-gray-500 mt-3">
@@ -1131,10 +1202,10 @@ export default function RegistrationForm() {
                     )}
                   </div>
                   <CardTitle className="text-2xl sm:text-3xl font-bold text-gray-800">
-                    {isEditing ? "Edit Registration" : `Complete ${registrationType} Registration`}
+                    {detailsTitle}
                   </CardTitle>
                   <CardDescription className="text-gray-600 text-lg">
-                    {isEditing ? "Update your registration information" : "Fill in your details to secure your spot"}
+                    {detailsDescription}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -1162,13 +1233,40 @@ export default function RegistrationForm() {
                       </div>
                     )}
 
+                    {isReturningRegistration && (
+                      <div className="rounded-xl border border-[#FFB803]/30 bg-[#FFB803]/10 p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                          <div>
+                            <p className="font-semibold text-[#054653]">
+                              Returning registrant for {conferenceLabel}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              This is a current conference registration, not an edit of an already registered current conference record. We prefilled your profile, organization, and location details only; please choose this conference's days and requirements again.
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={resetForm}
+                            className="border-[#0B7186] text-[#0B7186] hover:bg-white"
+                          >
+                            Start Over
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
                     {!isEditing && (
                       <div className="space-y-4 rounded-xl border border-gray-200 bg-gray-50 p-5">
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex items-center gap-2">
                             <Ticket className="w-5 h-5 text-[#0B7186]" />
                             <h3 className="text-lg font-semibold text-gray-800">
-                              {couponRequired ? "Coupon Code" : "Have a coupon?"}
+                              {couponRequired
+                                ? isReturningRegistration
+                                  ? "Coupon Code for Current Conference"
+                                  : "Coupon Code"
+                                : "Have a coupon?"}
                             </h3>
                           </div>
                           {!couponRequired && !couponData && (
@@ -1176,7 +1274,9 @@ export default function RegistrationForm() {
                           )}
                         </div>
                         <p className="text-sm text-gray-600">
-                          {couponRequired
+                          {isReturningRegistration && couponRequired
+                            ? "Your previous registration does not include this conference year. Apply a valid coupon before submitting this current conference registration."
+                            : couponRequired
                             ? "Apply your organization's coupon code before submitting this registration."
                             : "Apply a coupon if your organization provided one. Otherwise continue with your details below."}
                         </p>
@@ -1814,7 +1914,11 @@ export default function RegistrationForm() {
                         ) : (
                           <>
                             <CheckCircle className="mr-2 h-5 w-5" />
-                            {isEditing ? "Update Registration" : "Complete Registration"}
+                            {isEditing
+                              ? "Update Registration"
+                              : isReturningRegistration
+                                ? "Complete Current Conference Registration"
+                                : "Complete Registration"}
                           </>
                         )}
                       </Button>

@@ -25,6 +25,7 @@ export default function DownloadProgramPage() {
   const [conference, setConference] = useState(null)
   const [program, setProgram] = useState(null)
   const [sessions, setSessions] = useState([])
+  const [timeBlocks, setTimeBlocks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [isDownloading, setIsDownloading] = useState(false)
@@ -48,6 +49,7 @@ export default function DownloadProgramPage() {
 
         setProgram(programData.program)
         setSessions(programData.sessions)
+        setTimeBlocks(programData.timeBlocks || [])
       } catch (err) {
         setError(err.message)
       } finally {
@@ -61,7 +63,7 @@ export default function DownloadProgramPage() {
   const handleDownload = async () => {
     try {
       setIsDownloading(true)
-      const result = await generateProgramPDF(conference, program, sessions)
+      const result = await generateProgramPDF(conference, program, sessions, timeBlocks)
       toast({
         title: "Program downloaded",
         description: `Saved as ${result.filename}`,
@@ -107,6 +109,7 @@ export default function DownloadProgramPage() {
 
   const includedItems = [
     "Complete session schedule organized by day",
+    "Breaks, lunch, ceremonies, and other published activity slots",
     "Session details, descriptions, and topics",
     "Speaker information and session chairs",
     "Venue halls and timing information",

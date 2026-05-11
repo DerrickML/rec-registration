@@ -17,6 +17,7 @@ export default function ProgramPage() {
   const [conference, setConference] = useState(null)
   const [program, setProgram] = useState(null)
   const [sessions, setSessions] = useState([])
+  const [timeBlocks, setTimeBlocks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -38,6 +39,7 @@ export default function ProgramPage() {
 
         setProgram(programData.program)
         setSessions(programData.sessions)
+        setTimeBlocks(programData.timeBlocks || [])
       } catch (err) {
         setError(err.message)
       } finally {
@@ -86,7 +88,12 @@ export default function ProgramPage() {
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row lg:justify-end">
-                <DownloadProgramButton conference={conference} program={program} sessions={sessions} />
+                <DownloadProgramButton
+                  conference={conference}
+                  program={program}
+                  sessions={sessions}
+                  timeBlocks={timeBlocks}
+                />
                 <ShareLinkButton conference={conference} />
               </div>
             </div>
@@ -124,7 +131,7 @@ export default function ProgramPage() {
             sessionCount={sessions.length}
             hallsCount={halls.length}
           />
-          <ProgramSchedule conference={conference} program={program} sessions={sessions} />
+          <ProgramSchedule conference={conference} program={program} sessions={sessions} timeBlocks={timeBlocks} />
         </section>
       </main>
 

@@ -6,7 +6,7 @@ import { Download, Loader2 } from "lucide-react"
 import { generateProgramPDF } from "@/lib/pdf-generator"
 import { useToast } from "@/hooks/use-toast"
 
-export default function DownloadProgramButton({ conference, program, sessions }) {
+export default function DownloadProgramButton({ conference, program, sessions, timeBlocks = [] }) {
   const [isGenerating, setIsGenerating] = useState(false)
   const { toast } = useToast()
 
@@ -15,7 +15,7 @@ export default function DownloadProgramButton({ conference, program, sessions })
       setIsGenerating(true)
 
       // Generate and download PDF
-      const result = await generateProgramPDF(conference, program, sessions)
+      const result = await generateProgramPDF(conference, program, sessions, timeBlocks)
 
       toast({
         title: "Success!",

@@ -9,6 +9,7 @@ export default function EmbeddedProgramPage() {
   const [conference, setConference] = useState(null)
   const [program, setProgram] = useState(null)
   const [sessions, setSessions] = useState([])
+  const [timeBlocks, setTimeBlocks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -30,6 +31,7 @@ export default function EmbeddedProgramPage() {
 
         setProgram(programData.program)
         setSessions(programData.sessions)
+        setTimeBlocks(programData.timeBlocks || [])
       } catch (err) {
         setError(err.message)
       } finally {
@@ -56,7 +58,13 @@ export default function EmbeddedProgramPage() {
   return (
     <main className="min-h-screen bg-slate-50 p-3 sm:p-5">
       <div className="mx-auto max-w-7xl">
-        <ProgramSchedule conference={conference} program={program} sessions={sessions} compact />
+        <ProgramSchedule
+          conference={conference}
+          program={program}
+          sessions={sessions}
+          timeBlocks={timeBlocks}
+          compact
+        />
       </div>
     </main>
   )

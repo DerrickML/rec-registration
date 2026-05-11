@@ -10,10 +10,11 @@ import {
   getSessionsByDay,
   groupSessionsByTimeSlot,
 } from "@/lib/program-utils"
+import { buildScheduleRows, hasProgramTimeBlocks } from "@/lib/schedule-utils"
 import DayTab from "@/components/program/day-tab"
 import TimeSlotAccordion from "@/components/program/time-slot-accordion"
 
-export default function ProgramSchedule({ conference, program, sessions, compact = false }) {
+export default function ProgramSchedule({ conference, program, sessions, timeBlocks = [], compact = false }) {
   const [selectedDay, setSelectedDay] = useState(null)
   const [selectedHall, setSelectedHall] = useState("all")
   const [expandedTimeSlots, setExpandedTimeSlots] = useState({})
@@ -32,7 +33,11 @@ export default function ProgramSchedule({ conference, program, sessions, compact
 
   const daySessions = selectedDay ? getSessionsByDay(sessions, selectedDay) : []
   const filteredSessions = getFilteredSessions(daySessions, selectedHall)
-  const groupedSessions = groupSessionsByTimeSlot(filteredSessions)
+  const usesTimeBlocks = hasProgramTimeBlocks(timeBlocks)
+  const groupedSessions = usesTimeBlocks ? {} : groupSessionsByTimeSlot(filteredSessions)
+  const scheduleRows = usesTimeBlocks
+    ? buildScheduleRows({ sessions, timeBlocks, day: selectedDay, selectedHall })
+    : []
 
   const toggleTimeSlot = (timeKey) => {
     setExpandedTimeSlots((previous) => ({
@@ -52,7 +57,7 @@ export default function ProgramSchedule({ conference, program, sessions, compact
               Sessions Schedule
             </h2>
             <p className="mt-1 text-sm text-gray-600">
-              Browse {sessions.length} published {sessions.length === 1 ? "session" : "sessions"} by day and venue.
+              Browse {sessions.length} published {sessions.length === 1 ? "session" : "sessions"} by day, venue, and program block.
             </p>
           </div>
 
@@ -102,7 +107,30 @@ export default function ProgramSchedule({ conference, program, sessions, compact
 
         <div className="px-4 py-5 sm:px-6 sm:py-6">
           <TabsContent value={selectedDay ? String(selectedDay) : "none"} className="mt-0">
-            {filteredSessions.length === 0 ? (
+            {usesTimeBlocks ? (
+              scheduleRows.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-gray-300 bg-slate-50 px-6 py-12 text-center">
+                  <CalendarX className="mx-auto mb-3 h-10 w-10 text-gray-400" />
+                  <h3 className="text-base font-semibold text-gray-950">No schedule blocks match this view</h3>
+                  <p className="mt-1 text-sm text-gray-600">
+                    Try another day{selectedHall !== "all" ? " or choose all halls" : ""}.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  {scheduleRows.map((row) => (
+                    <TimeSlotAccordion
+                      key={row.key}
+                      timeKey={row.key}
+                      timeSlotData={row}
+                      isExpanded={isTimeSlotExpanded(row.key)}
+                      onToggle={() => toggleTimeSlot(row.key)}
+                      formatTimeWithTimezone={formatTimeWithTimezone}
+                    />
+                  ))}
+                </div>
+              )
+            ) : filteredSessions.length === 0 ? (
               <div className="rounded-lg border border-dashed border-gray-300 bg-slate-50 px-6 py-12 text-center">
                 <CalendarX className="mx-auto mb-3 h-10 w-10 text-gray-400" />
                 <h3 className="text-base font-semibold text-gray-950">No sessions match this view</h3>

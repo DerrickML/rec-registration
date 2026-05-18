@@ -171,6 +171,14 @@ export default function Footer({ conference }) {
               </li>
               <li>
                 <Link
+                  href="/sponsors"
+                  className="text-gray-400 hover:text-white text-sm transition-colors"
+                >
+                  Sponsors & Partners
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/venue"
                   className="text-gray-400 hover:text-white text-sm transition-colors"
                 >

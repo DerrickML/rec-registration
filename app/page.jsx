@@ -19,6 +19,7 @@ import { apiService } from "../lib/api-service"
 import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
 import { PageErrorState, PageLoadingState } from "@/components/layout/public-page-state"
+import SponsorShowcase from "@/components/sponsors/sponsor-showcase"
 
 /* ───────── Countdown Timer Component ───────── */
 function CountdownTimer({ targetDate }) {
@@ -120,6 +121,8 @@ function AnimatedStat({ value, label, suffix = "" }) {
 /* ───────── Main Page Component ───────── */
 export default function HomePage() {
   const [conference, setConference] = useState(null)
+  const [sponsorCategories, setSponsorCategories] = useState([])
+  const [sponsors, setSponsors] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -128,6 +131,11 @@ export default function HomePage() {
       try {
         const activeConference = await apiService.getActiveConference()
         setConference(activeConference)
+        if (activeConference?.$id) {
+          const sponsorSetup = await apiService.getConferenceSponsors(activeConference.$id)
+          setSponsorCategories(sponsorSetup.categories)
+          setSponsors(sponsorSetup.sponsors)
+        }
       } catch (err) {
         setError(err.message)
       } finally {
@@ -391,6 +399,12 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <SponsorShowcase
+        conference={conference}
+        categories={sponsorCategories}
+        sponsors={sponsors}
+      />
 
       {/* ─── Conference Agenda ─── */}
       {days.length > 0 && (

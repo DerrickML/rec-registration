@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { apiService } from "@/lib/api-service"
+import { fetchPublicProgramData } from "@/lib/public-program-api"
 import { PageErrorState, PageLoadingState } from "@/components/layout/public-page-state"
 import ProgramSchedule from "@/components/program/program-schedule"
 
@@ -16,24 +16,13 @@ export default function EmbeddedProgramPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const activeConference = await apiService.getActiveConference()
-        if (!activeConference) {
-          setError("No active conference found")
-          return
-        }
-        setConference(activeConference)
-
-        const programData = await apiService.getConferenceProgramWithSessions(activeConference.$id)
-        if (!programData) {
-          setError("No published program available for this conference")
-          return
-        }
-
+        const programData = await fetchPublicProgramData()
+        setConference(programData.conference)
         setProgram(programData.program)
-        setSessions(programData.sessions)
+        setSessions(programData.sessions || [])
         setTimeBlocks(programData.timeBlocks || [])
       } catch (err) {
-        setError(err.message)
+        setError(err.message || "Failed to fetch conference program")
       } finally {
         setLoading(false)
       }

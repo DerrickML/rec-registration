@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Building, Calendar, MapPin } from "lucide-react"
-import { apiService } from "@/lib/api-service"
+import { fetchPublicProgramData } from "@/lib/public-program-api"
 import { formatDateRange } from "@/lib/program-utils"
 import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
@@ -24,24 +24,13 @@ export default function ProgramPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const activeConference = await apiService.getActiveConference()
-        if (!activeConference) {
-          setError("No active conference found")
-          return
-        }
-        setConference(activeConference)
-
-        const programData = await apiService.getConferenceProgramWithSessions(activeConference.$id)
-        if (!programData) {
-          setError("No published program available for this conference")
-          return
-        }
-
+        const programData = await fetchPublicProgramData()
+        setConference(programData.conference)
         setProgram(programData.program)
-        setSessions(programData.sessions)
+        setSessions(programData.sessions || [])
         setTimeBlocks(programData.timeBlocks || [])
       } catch (err) {
-        setError(err.message)
+        setError(err.message || "Failed to fetch conference program")
       } finally {
         setLoading(false)
       }

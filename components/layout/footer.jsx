@@ -185,6 +185,14 @@ export default function Footer({ conference }) {
                   Venue & Travel
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/scanner"
+                  className="text-gray-400 hover:text-white text-sm transition-colors"
+                >
+                  Scanner Access
+                </Link>
+              </li>
               {conference.registrationOpen && (
                 <li>
                   <Link

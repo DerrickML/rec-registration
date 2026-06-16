@@ -1,5 +1,4 @@
-import Link from "next/link"
-import { AlertTriangle, BadgeCheck, CalendarDays, Download, ExternalLink, MapPin, QrCode, ShieldCheck, UserRound } from "lucide-react"
+import { AlertTriangle, BadgeCheck, CalendarDays, Download, ExternalLink, Hash, MapPin, ShieldCheck, UserRound } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
@@ -54,6 +53,7 @@ export default async function DigitalBadgePage({ params }) {
 
   const conference = badge.conference || {}
   const registration = badge.registration || {}
+  const badgeNumber = badge.badge?.badgeNumberLabel || badge.badge?.badgeNumber || ""
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -99,14 +99,20 @@ export default async function DigitalBadgePage({ params }) {
                       Save QR Image
                     </Button>
                   </a>
-                  <Link href="/scanner">
-                    <Button variant="outline" className="h-10 w-full rounded-lg text-sm font-bold">
-                      <QrCode className="mr-2 h-4 w-4" />
-                      Open Scanner
-                    </Button>
-                  </Link>
                 </div>
               </div>
+              {badgeNumber && (
+                <div className="mt-4 rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-center">
+                  <div className="mb-2 flex items-center justify-center gap-2 text-xs font-extrabold uppercase tracking-wide text-[#0B7186]">
+                    <Hash className="h-4 w-4" />
+                    Manual badge number
+                  </div>
+                  <div className="font-mono text-2xl font-black tracking-wider text-[#054653]">{badgeNumber}</div>
+                  <p className="mt-2 text-xs font-semibold leading-5 text-slate-600">
+                    Use this number at scan points if camera scanning is not available.
+                  </p>
+                </div>
+              )}
               <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
                 <div className="mb-1 flex items-center gap-2 font-bold">
                   <AlertTriangle className="h-4 w-4" />

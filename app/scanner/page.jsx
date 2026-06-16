@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
+import jsQR from "jsqr"
 import { BadgeCheck, Camera, CheckCircle2, CircleAlert, LogOut, Mail, QrCode, RefreshCcw, ShieldCheck, Smartphone, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -38,8 +39,23 @@ function resultTone(status) {
   return "border-red-200 bg-red-50 text-red-800"
 }
 
+function resultTitle(result) {
+  if (result?.status === "accepted") return "Scan Accepted"
+  if (result?.status === "duplicate") return "Already Scanned"
+  return "Scan Rejected"
+}
+
+function resultMessage(result) {
+  if (!result) return ""
+  const registrant = result.registration?.name || result.registration?.email || ""
+  const organization = result.registration?.organization ? ` · ${result.registration.organization}` : ""
+  const previous = result.previousScan?.scannedAt ? ` Previous scan: ${new Date(result.previousScan.scannedAt).toLocaleString("en-UG", { timeZone: "Africa/Kampala", dateStyle: "medium", timeStyle: "short" })}.` : ""
+  return `${registrant || result.error || result.reason || "Scan processed"}${organization}${previous}`
+}
+
 export default function PublicScannerPage() {
   const videoRef = useRef(null)
+  const canvasRef = useRef(null)
   const streamRef = useRef(null)
   const detectorRef = useRef(null)
   const scanningRef = useRef(false)
@@ -63,6 +79,11 @@ export default function PublicScannerPage() {
   const activeEvent = useMemo(
     () => events.find((event) => event.$id === eventId) || null,
     [eventId, events]
+  )
+  const canScanSelectedEvent = Boolean(
+    activeEvent &&
+    activeEvent.isCurrentlyOpen !== false &&
+    !["event_not_started", "event_ended"].includes(activeEvent.availabilityCode)
   )
 
   const loadEvents = useCallback(async (token) => {
@@ -93,6 +114,15 @@ export default function PublicScannerPage() {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop())
     }
+  }, [])
+
+  const stopCamera = useCallback(() => {
+    scanningRef.current = false
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop())
+      streamRef.current = null
+    }
+    setCameraActive(false)
   }, [])
 
   const lookupConferences = async (event) => {
@@ -162,6 +192,10 @@ export default function PublicScannerPage() {
 
   const submitScan = useCallback(async (payload) => {
     if (!session?.token || !eventId || !payload) return
+    if (!canScanSelectedEvent) {
+      setResult({ status: "rejected", reason: "event_closed", error: activeEvent?.availabilityMessage || "This scan event is not open right now." })
+      return
+    }
     setLoading("scan")
     setError("")
     setResult(null)
@@ -182,29 +216,21 @@ export default function PublicScannerPage() {
     } catch (err) {
       setResult({ status: "rejected", reason: "scan_failed", error: err.message || "Scan failed" })
     } finally {
+      stopCamera()
       setLoading("")
     }
-  }, [eventId, session])
-
-  const stopCamera = () => {
-    scanningRef.current = false
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop())
-      streamRef.current = null
-    }
-    setCameraActive(false)
-  }
+  }, [activeEvent, canScanSelectedEvent, eventId, session, stopCamera])
 
   const startCamera = async () => {
     setCameraError("")
     setResult(null)
-    if (!("BarcodeDetector" in window)) {
-      setCameraError("This browser does not support native QR scanning. Use manual entry or open this page in a modern mobile browser.")
+    if (!canScanSelectedEvent) {
+      setCameraError(activeEvent?.availabilityMessage || "This scan event is not open right now.")
       return
     }
 
     try {
-      detectorRef.current = detectorRef.current || new window.BarcodeDetector({ formats: ["qr_code"] })
+      detectorRef.current = "BarcodeDetector" in window ? detectorRef.current || new window.BarcodeDetector({ formats: ["qr_code"] }) : null
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: "environment" } },
         audio: false,
@@ -217,13 +243,35 @@ export default function PublicScannerPage() {
       setCameraActive(true)
       scanningRef.current = true
 
+      const detectWithCanvas = () => {
+        const video = videoRef.current
+        if (!video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) return ""
+        const canvas = canvasRef.current || document.createElement("canvas")
+        canvasRef.current = canvas
+        const maxWidth = 720
+        const scale = Math.min(1, maxWidth / video.videoWidth)
+        canvas.width = Math.max(1, Math.floor(video.videoWidth * scale))
+        canvas.height = Math.max(1, Math.floor(video.videoHeight * scale))
+        const context = canvas.getContext("2d", { willReadFrequently: true })
+        if (!context) return ""
+        context.drawImage(video, 0, 0, canvas.width, canvas.height)
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+        return jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" })?.data || ""
+      }
+
       const tick = async () => {
-        if (!scanningRef.current || !videoRef.current || !detectorRef.current) return
+        if (!scanningRef.current || !videoRef.current) return
         try {
-          const codes = await detectorRef.current.detect(videoRef.current)
-          const payload = codes?.[0]?.rawValue
+          let payload = ""
+          if (detectorRef.current) {
+            const codes = await detectorRef.current.detect(videoRef.current)
+            payload = codes?.[0]?.rawValue || ""
+          } else {
+            payload = detectWithCanvas()
+          }
           if (payload && payload !== lastPayloadRef.current) {
             lastPayloadRef.current = payload
+            stopCamera()
             await submitScan(payload)
             window.setTimeout(() => {
               lastPayloadRef.current = ""
@@ -397,6 +445,9 @@ export default function PublicScannerPage() {
                 <div className="mt-1 text-slate-600">
                   {[activeEvent.type, activeEvent.venue, activeEvent.day ? `Day ${activeEvent.day}` : ""].filter(Boolean).join(" · ")}
                 </div>
+                <div className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-extrabold ${activeEvent.isCurrentlyOpen ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>
+                  {activeEvent.isCurrentlyOpen ? "Open for scanning" : activeEvent.availabilityMessage || "Not open for scanning"}
+                </div>
               </div>
             )}
 
@@ -418,7 +469,7 @@ export default function PublicScannerPage() {
 
             <div className="flex flex-col gap-2 sm:flex-row">
               {!cameraActive ? (
-                <Button className="h-11 w-full rounded-lg bg-[#0B7186] font-bold text-white hover:bg-[#054653] sm:w-auto" onClick={startCamera} disabled={!eventId}>
+                <Button className="h-11 w-full rounded-lg bg-[#0B7186] font-bold text-white hover:bg-[#054653] sm:w-auto" onClick={startCamera} disabled={!eventId || !canScanSelectedEvent}>
                   <Camera className="mr-2 h-4 w-4" />
                   Start Camera
                 </Button>
@@ -441,35 +492,54 @@ export default function PublicScannerPage() {
               }}
             >
               <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">
-                Manual QR Payload or Badge Link
+                Manual Badge Number / QR Payload
                 <input
                   value={manualPayload}
                   onChange={(event) => setManualPayload(event.target.value)}
                   className="h-11 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#0B7186]"
-                  placeholder="Paste QR payload or badge link"
+                  placeholder="Enter badge number, QR payload, or badge link"
                 />
               </label>
-              <Button type="submit" className="h-11 w-full rounded-lg bg-[#0B7186] font-bold text-white hover:bg-[#054653] sm:w-auto" disabled={!manualPayload || loading === "scan"}>
+              <Button type="submit" className="h-11 w-full rounded-lg bg-[#0B7186] font-bold text-white hover:bg-[#054653] sm:w-auto" disabled={!manualPayload || loading === "scan" || !canScanSelectedEvent}>
                 {loading === "scan" ? <RefreshCcw className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
                 Submit
               </Button>
             </form>
 
             {result && (
-              <div className={`grid grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-xl border p-4 ${resultTone(result.status)}`}>
-                {result.status === "accepted" ? (
-                  <CheckCircle2 className="mt-0.5 h-6 w-6" />
-                ) : result.status === "duplicate" ? (
-                  <CircleAlert className="mt-0.5 h-6 w-6" />
-                ) : (
-                  <XCircle className="mt-0.5 h-6 w-6" />
-                )}
-                <div>
-                  <div className="font-extrabold capitalize">{result.status || "Scan result"}</div>
-                  <p className="mt-1 text-sm leading-6">
-                    {result.registration?.name || result.error || result.reason || "Scan processed"}
-                    {result.registration?.organization ? ` · ${result.registration.organization}` : ""}
-                  </p>
+              <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 px-3 py-4 backdrop-blur-sm sm:items-center">
+                <div className={`w-full max-w-md rounded-2xl border bg-white p-5 shadow-2xl ${resultTone(result.status)}`}>
+                  <div className="flex items-start gap-3">
+                    {result.status === "accepted" ? (
+                      <CheckCircle2 className="mt-0.5 h-8 w-8 shrink-0" />
+                    ) : result.status === "duplicate" ? (
+                      <CircleAlert className="mt-0.5 h-8 w-8 shrink-0" />
+                    ) : (
+                      <XCircle className="mt-0.5 h-8 w-8 shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <h3 className="text-xl font-extrabold text-slate-950">{resultTitle(result)}</h3>
+                      <p className="mt-2 text-sm leading-6 text-slate-700">{resultMessage(result)}</p>
+                    </div>
+                  </div>
+                  <div className="mt-5 grid gap-2 sm:grid-cols-2">
+                    <Button
+                      type="button"
+                      className="h-11 rounded-lg bg-[#0B7186] font-bold text-white hover:bg-[#054653]"
+                      onClick={() => {
+                        setResult(null)
+                        lastPayloadRef.current = ""
+                        startCamera()
+                      }}
+                      disabled={!eventId || !canScanSelectedEvent}
+                    >
+                      <Camera className="mr-2 h-4 w-4" />
+                      Scan Another Badge
+                    </Button>
+                    <Button type="button" variant="outline" className="h-11 rounded-lg font-bold" onClick={() => setResult(null)}>
+                      Close
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}

@@ -258,21 +258,21 @@ export default function PublicScannerPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#054653] px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
-      <section className="mx-auto grid w-full max-w-5xl gap-5">
+    <main className="min-h-screen overflow-x-hidden bg-[#054653] px-3 py-4 text-slate-950 sm:px-6 sm:py-5 lg:px-8">
+      <section className="mx-auto grid w-full min-w-0 max-w-5xl gap-4 sm:gap-5">
         <header className="flex flex-col gap-4 py-4 text-white sm:flex-row sm:items-center sm:justify-between">
-          <div>
+          <div className="min-w-0">
             <Link href="/" className="mb-3 inline-flex items-center gap-2 text-sm font-bold text-white/75 hover:text-white">
               <BadgeCheck className="h-4 w-4 text-[#FFB803]" />
               REC & Expo
             </Link>
-            <h1 className="text-4xl font-extrabold leading-none sm:text-5xl">Conference Scanner</h1>
+            <h1 className="break-words text-3xl font-extrabold leading-tight sm:text-5xl sm:leading-none">Conference Scanner</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70">
               Sign in with your assigned email, select a scan point, then scan attendee QR badges.
             </p>
           </div>
           {session && (
-            <Button variant="outline" className="h-10 rounded-lg border-white/25 bg-white/10 text-white hover:bg-white/15" onClick={logout}>
+            <Button variant="outline" className="h-10 w-full rounded-lg border-white/25 bg-white/10 text-white hover:bg-white/15 sm:w-auto" onClick={logout}>
               <LogOut className="mr-2 h-4 w-4" />
               Sign out
             </Button>
@@ -286,7 +286,7 @@ export default function PublicScannerPage() {
         )}
 
         {!session ? (
-          <section className="rounded-2xl border border-white/20 bg-white p-5 shadow-2xl shadow-black/20 sm:p-7">
+          <section className="w-full min-w-0 rounded-2xl border border-white/20 bg-white p-4 shadow-2xl shadow-black/20 sm:p-7">
             <div className="mb-5 flex items-start gap-3">
               <div className="rounded-xl bg-[#0B7186]/10 p-3 text-[#0B7186]">
                 <ShieldCheck className="h-6 w-6" />
@@ -299,7 +299,7 @@ export default function PublicScannerPage() {
 
             {!otpId ? (
               <form className="grid gap-4" onSubmit={lookupConferences}>
-                <label className="grid gap-2 text-sm font-bold text-slate-700">
+                <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">
                   Email
                   <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 focus-within:border-[#0B7186]">
                     <Mail className="h-4 w-4 text-slate-400" />
@@ -315,12 +315,12 @@ export default function PublicScannerPage() {
                 </label>
 
                 {conferences.length > 0 && (
-                  <label className="grid gap-2 text-sm font-bold text-slate-700">
+                  <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">
                     Conference
                     <select
                       value={conferenceId}
                       onChange={(event) => setConferenceId(event.target.value)}
-                      className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#0B7186]"
+                      className="h-11 w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#0B7186]"
                     >
                       {conferences.map((conference) => (
                         <option key={conference.$id} value={conference.$id}>{conference.title || `REC ${conference.year}`}</option>
@@ -330,12 +330,12 @@ export default function PublicScannerPage() {
                 )}
 
                 <div className="flex flex-col gap-2 sm:flex-row">
-                  <Button type="submit" className="h-11 rounded-lg bg-[#0B7186] font-bold text-white hover:bg-[#054653]" disabled={loading === "lookup"}>
+                  <Button type="submit" className="h-11 w-full rounded-lg bg-[#0B7186] font-bold text-white hover:bg-[#054653] sm:w-auto" disabled={loading === "lookup"}>
                     {loading === "lookup" ? <RefreshCcw className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
                     Check Access
                   </Button>
                   {conferences.length > 0 && (
-                    <Button type="button" variant="outline" className="h-11 rounded-lg font-bold" onClick={requestOtp} disabled={loading === "otp" || !conferenceId}>
+                    <Button type="button" variant="outline" className="h-11 w-full rounded-lg font-bold sm:w-auto" onClick={requestOtp} disabled={loading === "otp" || !conferenceId}>
                       {loading === "otp" ? <RefreshCcw className="mr-2 h-4 w-4 animate-spin" /> : <Smartphone className="mr-2 h-4 w-4" />}
                       Send Code
                     </Button>
@@ -344,7 +344,7 @@ export default function PublicScannerPage() {
               </form>
             ) : (
               <form className="grid gap-4" onSubmit={verifyOtp}>
-                <label className="grid gap-2 text-sm font-bold text-slate-700">
+                <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">
                   Access Code
                   <input
                     value={otpCode}
@@ -356,11 +356,11 @@ export default function PublicScannerPage() {
                   />
                 </label>
                 <div className="flex flex-col gap-2 sm:flex-row">
-                  <Button type="submit" className="h-11 rounded-lg bg-[#0B7186] font-bold text-white hover:bg-[#054653]" disabled={loading === "verify" || otpCode.length !== 6}>
+                  <Button type="submit" className="h-11 w-full rounded-lg bg-[#0B7186] font-bold text-white hover:bg-[#054653] sm:w-auto" disabled={loading === "verify" || otpCode.length !== 6}>
                     {loading === "verify" ? <RefreshCcw className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
                     Verify Code
                   </Button>
-                  <Button type="button" variant="outline" className="h-11 rounded-lg font-bold" onClick={() => setOtpId("")}>
+                  <Button type="button" variant="outline" className="h-11 w-full rounded-lg font-bold sm:w-auto" onClick={() => setOtpId("")}>
                     Change Email
                   </Button>
                 </div>
@@ -368,13 +368,13 @@ export default function PublicScannerPage() {
             )}
           </section>
         ) : (
-          <section className="grid gap-5 rounded-2xl border border-white/20 bg-white p-5 shadow-2xl shadow-black/20 sm:p-7">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-              <div>
+          <section className="grid w-full min-w-0 gap-4 rounded-2xl border border-white/20 bg-white p-4 shadow-2xl shadow-black/20 sm:gap-5 sm:p-7">
+            <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(240px,280px)]">
+              <div className="min-w-0">
                 <h2 className="text-2xl font-extrabold text-slate-950">{session.conference?.title || "Conference Scanner"}</h2>
                 <p className="mt-1 text-sm text-slate-600">{session.operator?.name || session.operator?.email}</p>
               </div>
-              <label className="grid gap-2 text-sm font-bold text-slate-700">
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">
                 Scan Event
                 <select
                   value={eventId}
@@ -382,7 +382,7 @@ export default function PublicScannerPage() {
                     setEventId(event.target.value)
                     setResult(null)
                   }}
-                  className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#0B7186]"
+                  className="h-11 w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#0B7186]"
                 >
                   {events.map((event) => (
                     <option key={event.$id} value={event.$id}>{event.name}</option>
@@ -392,7 +392,7 @@ export default function PublicScannerPage() {
             </div>
 
             {activeEvent && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+              <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
                 <div className="font-extrabold text-slate-950">{activeEvent.name}</div>
                 <div className="mt-1 text-slate-600">
                   {[activeEvent.type, activeEvent.venue, activeEvent.day ? `Day ${activeEvent.day}` : ""].filter(Boolean).join(" · ")}
@@ -400,7 +400,7 @@ export default function PublicScannerPage() {
               </div>
             )}
 
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-950">
+            <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-950">
               <video ref={videoRef} className={`${cameraActive ? "block" : "hidden"} min-h-[320px] w-full object-cover`} muted playsInline />
               {!cameraActive && (
                 <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 p-8 text-center text-white/75">
@@ -418,38 +418,38 @@ export default function PublicScannerPage() {
 
             <div className="flex flex-col gap-2 sm:flex-row">
               {!cameraActive ? (
-                <Button className="h-11 rounded-lg bg-[#0B7186] font-bold text-white hover:bg-[#054653]" onClick={startCamera} disabled={!eventId}>
+                <Button className="h-11 w-full rounded-lg bg-[#0B7186] font-bold text-white hover:bg-[#054653] sm:w-auto" onClick={startCamera} disabled={!eventId}>
                   <Camera className="mr-2 h-4 w-4" />
                   Start Camera
                 </Button>
               ) : (
-                <Button variant="outline" className="h-11 rounded-lg font-bold" onClick={stopCamera}>
+                <Button variant="outline" className="h-11 w-full rounded-lg font-bold sm:w-auto" onClick={stopCamera}>
                   Stop Camera
                 </Button>
               )}
-              <Button variant="outline" className="h-11 rounded-lg font-bold" onClick={() => loadEvents(session.token)}>
+              <Button variant="outline" className="h-11 w-full rounded-lg font-bold sm:w-auto" onClick={() => loadEvents(session.token)}>
                 <RefreshCcw className="mr-2 h-4 w-4" />
                 Refresh Events
               </Button>
             </div>
 
             <form
-              className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+              className="grid min-w-0 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
               onSubmit={(event) => {
                 event.preventDefault()
                 submitScan(manualPayload)
               }}
             >
-              <label className="grid gap-2 text-sm font-bold text-slate-700">
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">
                 Manual QR Payload or Badge Link
                 <input
                   value={manualPayload}
                   onChange={(event) => setManualPayload(event.target.value)}
-                  className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#0B7186]"
+                  className="h-11 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#0B7186]"
                   placeholder="Paste QR payload or badge link"
                 />
               </label>
-              <Button type="submit" className="h-11 rounded-lg bg-[#0B7186] font-bold text-white hover:bg-[#054653]" disabled={!manualPayload || loading === "scan"}>
+              <Button type="submit" className="h-11 w-full rounded-lg bg-[#0B7186] font-bold text-white hover:bg-[#054653] sm:w-auto" disabled={!manualPayload || loading === "scan"}>
                 {loading === "scan" ? <RefreshCcw className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
                 Submit
               </Button>

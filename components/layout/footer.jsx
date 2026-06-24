@@ -179,6 +179,14 @@ export default function Footer({ conference }) {
               </li>
               <li>
                 <Link
+                  href="/media"
+                  className="text-gray-400 hover:text-white text-sm transition-colors"
+                >
+                  Media Library
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/venue"
                   className="text-gray-400 hover:text-white text-sm transition-colors"
                 >

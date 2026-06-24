@@ -19,6 +19,7 @@ import { apiService } from "../lib/api-service"
 import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
 import { PageErrorState, PageLoadingState } from "@/components/layout/public-page-state"
+import MediaShowcase from "@/components/media/media-showcase"
 import SponsorShowcase from "@/components/sponsors/sponsor-showcase"
 
 /* ───────── Countdown Timer Component ───────── */
@@ -123,6 +124,7 @@ export default function HomePage() {
   const [conference, setConference] = useState(null)
   const [sponsorCategories, setSponsorCategories] = useState([])
   const [sponsors, setSponsors] = useState([])
+  const [mediaItems, setMediaItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -132,9 +134,13 @@ export default function HomePage() {
         const activeConference = await apiService.getActiveConference()
         setConference(activeConference)
         if (activeConference?.$id) {
-          const sponsorSetup = await apiService.getConferenceSponsors(activeConference.$id)
+          const [sponsorSetup, mediaSetup] = await Promise.all([
+            apiService.getConferenceSponsors(activeConference.$id),
+            apiService.getConferenceMedia(activeConference.$id, { featured: true, limit: 8 }),
+          ])
           setSponsorCategories(sponsorSetup.categories)
           setSponsors(sponsorSetup.sponsors)
+          setMediaItems(mediaSetup.documents || [])
         }
       } catch (err) {
         setError(err.message)
@@ -405,6 +411,8 @@ export default function HomePage() {
         categories={sponsorCategories}
         sponsors={sponsors}
       />
+
+      <MediaShowcase conference={conference} items={mediaItems} />
 
       {/* ─── Conference Agenda ─── */}
       {days.length > 0 && (

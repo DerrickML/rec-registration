@@ -6,6 +6,7 @@ import Footer from "@/components/layout/footer"
 import PageHero from "@/components/layout/page-hero"
 import { PageErrorState, PageLoadingState } from "@/components/layout/public-page-state"
 import MediaDirectory from "@/components/media/media-directory"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { apiService } from "@/lib/api-service"
 
 export default function MediaPage() {
@@ -82,8 +83,8 @@ export default function MediaPage() {
         backgroundImage={conference.heroImageUrl}
       />
       <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
-        <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-[minmax(0,1fr)_320px] sm:items-center">
-          <div>
+        <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[minmax(0,1fr)_minmax(260px,420px)] md:items-center">
+          <div className="min-w-0">
             <p className="text-xs font-extrabold uppercase tracking-wide text-[#0B7186]">Conference media space</p>
             <h2 className="mt-1 text-xl font-extrabold text-slate-950">
               {conference.shortName || conference.title || "Selected conference"}
@@ -92,20 +93,32 @@ export default function MediaPage() {
               {conference.mediaCount || items.length || 0} published media item{(conference.mediaCount || items.length || 0) === 1 ? "" : "s"}
             </p>
           </div>
-          <label className="grid gap-2 text-sm font-bold text-slate-700">
-            View another conference
-            <select
+          <div className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">
+            <span>View another conference</span>
+            <Select
               value={selectedConferenceId}
-              onChange={(event) => setSelectedConferenceId(event.target.value)}
-              className="h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold outline-none focus:border-[#0B7186]"
+              onValueChange={(value) => setSelectedConferenceId(value)}
             >
-              {mediaConferences.map((item) => (
-                <option key={item.$id} value={item.$id}>
-                  {item.shortName || item.title || item.fullName || item.year} ({item.mediaCount})
-                </option>
-              ))}
-            </select>
-          </label>
+              <SelectTrigger
+                aria-label="View another conference"
+                className="h-11 w-full min-w-0 max-w-full rounded-xl border-slate-200 bg-slate-50 text-sm font-semibold text-slate-900 focus:ring-[#0B7186]"
+              >
+                <SelectValue placeholder="Select conference" />
+              </SelectTrigger>
+              <SelectContent
+                align="end"
+                className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)] overflow-hidden"
+              >
+                {mediaConferences.map((item) => (
+                  <SelectItem key={item.$id} value={item.$id} className="pr-8">
+                    <span className="block max-w-full truncate">
+                      {item.shortName || item.title || item.fullName || item.year} ({item.mediaCount})
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </section>
       {mediaLoading ? (

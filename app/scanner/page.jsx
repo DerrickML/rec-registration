@@ -29,7 +29,12 @@ async function fetchScannerJson(url, { token, ...options } = {}) {
     },
   })
   const payload = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(payload.error || "Request failed")
+  if (!response.ok) {
+    const error = new Error(payload.error || "Request failed")
+    error.code = payload.code || ""
+    error.details = payload.details || {}
+    throw error
+  }
   return payload
 }
 
@@ -50,7 +55,40 @@ function resultMessage(result) {
   const registrant = result.registration?.name || result.registration?.email || ""
   const organization = result.registration?.organization ? ` · ${result.registration.organization}` : ""
   const previous = result.previousScan?.scannedAt ? ` Previous scan: ${new Date(result.previousScan.scannedAt).toLocaleString("en-UG", { timeZone: "Africa/Kampala", dateStyle: "medium", timeStyle: "short" })}.` : ""
-  return `${registrant || result.error || result.reason || "Scan processed"}${organization}${previous}`
+  return `${registrant || result.error || result.message || result.reason || "Scan processed"}${organization}${previous}`
+}
+
+function resultAttendance(result) {
+  return result?.attendance || result?.details?.attendance || null
+}
+
+function formatDays(days) {
+  return Array.isArray(days) && days.length ? days.join(", ") : "None"
+}
+
+function AttendanceSummary({ result }) {
+  const attendance = resultAttendance(result)
+  if (!attendance) return null
+
+  return (
+    <div className="mt-4 grid gap-2 rounded-xl bg-white/70 p-3 text-sm">
+      <div className="grid gap-1 sm:grid-cols-[130px_minmax(0,1fr)]">
+        <span className="text-xs font-extrabold uppercase tracking-wide text-slate-500">Registered days</span>
+        <strong className="break-words text-slate-950">{formatDays(attendance.registeredDays)}</strong>
+      </div>
+      <div className="grid gap-1 sm:grid-cols-[130px_minmax(0,1fr)]">
+        <span className="text-xs font-extrabold uppercase tracking-wide text-slate-500">Required event days</span>
+        <strong className="break-words text-slate-950">{formatDays(attendance.requiredDays)}</strong>
+      </div>
+      {attendance.matchedDays?.length > 0 && (
+        <div className="grid gap-1 sm:grid-cols-[130px_minmax(0,1fr)]">
+          <span className="text-xs font-extrabold uppercase tracking-wide text-slate-500">Matched days</span>
+          <strong className="break-words text-slate-950">{formatDays(attendance.matchedDays)}</strong>
+        </div>
+      )}
+      {attendance.message && <p className="m-0 text-sm font-bold leading-6 text-red-800">{attendance.message}</p>}
+    </div>
+  )
 }
 
 export default function PublicScannerPage() {
@@ -214,7 +252,12 @@ export default function PublicScannerPage() {
       setResult(data)
       setManualPayload("")
     } catch (err) {
-      setResult({ status: "rejected", reason: "scan_failed", error: err.message || "Scan failed" })
+      setResult({
+        status: "rejected",
+        reason: err.code || "scan_failed",
+        error: err.message || "Scan failed",
+        details: err.details || {},
+      })
     } finally {
       stopCamera()
       setLoading("")
@@ -520,6 +563,7 @@ export default function PublicScannerPage() {
                     <div className="min-w-0">
                       <h3 className="text-xl font-extrabold text-slate-950">{resultTitle(result)}</h3>
                       <p className="mt-2 text-sm leading-6 text-slate-700">{resultMessage(result)}</p>
+                      <AttendanceSummary result={result} />
                     </div>
                   </div>
                   <div className="mt-5 grid gap-2 sm:grid-cols-2">

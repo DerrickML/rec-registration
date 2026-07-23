@@ -1,6 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
+import { ArrowRight, FileText } from "lucide-react"
 import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
 import PageHero from "@/components/layout/page-hero"
@@ -92,6 +94,14 @@ export default function MediaPage() {
             <p className="mt-1 text-sm text-slate-600">
               {conference.mediaCount || items.length || 0} published media item{(conference.mediaCount || items.length || 0) === 1 ? "" : "s"}
             </p>
+            <Link
+              href="/media/reports"
+              className="mt-3 inline-flex items-center gap-2 text-sm font-extrabold text-[#0B7186] hover:text-[#054653]"
+            >
+              <FileText className="h-4 w-4" />
+              Browse conference reports
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
           <div className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">
             <span>View another conference</span>

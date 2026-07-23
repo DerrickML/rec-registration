@@ -12,12 +12,15 @@ import ProgramStats from "@/components/program/program-stats"
 import ProgramSchedule from "@/components/program/program-schedule"
 import DownloadProgramButton from "@/components/program/download-program-button"
 import ShareLinkButton from "@/components/program/share-link-button"
+import PreviousReportCta from "@/components/program/previous-report-cta"
+import { apiService } from "@/lib/api-service"
 
 export default function ProgramPage() {
   const [conference, setConference] = useState(null)
   const [program, setProgram] = useState(null)
   const [sessions, setSessions] = useState([])
   const [timeBlocks, setTimeBlocks] = useState([])
+  const [previousReport, setPreviousReport] = useState({ report: null, conference: null })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -29,6 +32,10 @@ export default function ProgramPage() {
         setProgram(programData.program)
         setSessions(programData.sessions || [])
         setTimeBlocks(programData.timeBlocks || [])
+        apiService
+          .getFeaturedPreviousReport(programData.conference?.$id)
+          .then((result) => setPreviousReport(result || { report: null, conference: null }))
+          .catch(() => setPreviousReport({ report: null, conference: null }))
       } catch (err) {
         setError(err.message || "Failed to fetch conference program")
       } finally {
@@ -122,6 +129,12 @@ export default function ProgramPage() {
           />
           <ProgramSchedule conference={conference} program={program} sessions={sessions} timeBlocks={timeBlocks} />
         </section>
+
+        <PreviousReportCta
+          conference={conference}
+          report={previousReport.report}
+          reportConference={previousReport.conference}
+        />
       </main>
 
       <Footer conference={conference} />

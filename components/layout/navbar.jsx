@@ -13,11 +13,12 @@ import {
 } from "lucide-react"
 
 const NAV_LINKS = [
-  { href: "/", label: "Home" },
+  { href: "/", label: "Home", exact: true },
   { href: "/about", label: "About" },
   { href: "/program", label: "Program" },
   { href: "/sponsors", label: "Sponsors" },
-  { href: "/media", label: "Media" },
+  { href: "/media", label: "Media", exact: true },
+  { href: "/media/reports", label: "Reports" },
   { href: "/venue", label: "Venue" },
 ]
 
@@ -56,12 +57,9 @@ export default function Navbar({ conference }) {
             </Link>
 
             {/* Desktop Nav */}
-            <nav className="hidden md:flex items-center space-x-1" aria-label="Primary navigation">
+            <nav className="hidden xl:flex items-center space-x-1" aria-label="Primary navigation">
               {NAV_LINKS.map((link) => {
-                const isActive =
-                  link.href === "/"
-                    ? pathname === "/"
-                    : pathname.startsWith(link.href)
+                const isActive = link.exact ? pathname === link.href : pathname.startsWith(link.href)
                 return (
                   <Link
                     key={link.href}
@@ -107,7 +105,7 @@ export default function Navbar({ conference }) {
               {/* Mobile menu button */}
               <button
                 onClick={() => setMobileOpen(!mobileOpen)}
-                className="rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 md:hidden"
+                className="rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 xl:hidden"
                 aria-label="Toggle menu"
                 aria-expanded={mobileOpen}
               >
@@ -119,13 +117,10 @@ export default function Navbar({ conference }) {
 
         {/* Mobile menu dropdown */}
         {mobileOpen && (
-          <div className="border-t border-gray-100 bg-white md:hidden">
+          <div className="border-t border-gray-100 bg-white xl:hidden">
             <nav className="space-y-1 px-4 py-3" aria-label="Mobile navigation">
               {NAV_LINKS.map((link) => {
-                const isActive =
-                  link.href === "/"
-                    ? pathname === "/"
-                    : pathname.startsWith(link.href)
+                const isActive = link.exact ? pathname === link.href : pathname.startsWith(link.href)
                 return (
                   <Link
                     key={link.href}

@@ -132,6 +132,11 @@ export default async function DigitalBadgePage({ params }) {
                   <p className="text-lg font-extrabold text-slate-950">{registration.name || "Registrant"}</p>
                   <p className="mt-1 text-sm text-slate-600">{registration.email || "No email available"}</p>
                   <p className="mt-1 text-sm text-slate-600">{registration.organization || "No organization provided"}</p>
+                  {registration.sponsorOrganization && (
+                    <p className="mt-2 text-sm font-semibold text-[#0B7186]">
+                      Sponsored by {registration.sponsorOrganization}
+                    </p>
+                  )}
                 </div>
 
                 <div className="rounded-xl border border-slate-200 bg-white p-4">

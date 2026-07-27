@@ -54,8 +54,11 @@ function resultMessage(result) {
   if (!result) return ""
   const registrant = result.registration?.name || result.registration?.email || ""
   const organization = result.registration?.organization ? ` · ${result.registration.organization}` : ""
+  const sponsor = result.registration?.sponsorOrganization
+    ? ` · Sponsored by ${result.registration.sponsorOrganization}`
+    : ""
   const previous = result.previousScan?.scannedAt ? ` Previous scan: ${new Date(result.previousScan.scannedAt).toLocaleString("en-UG", { timeZone: "Africa/Kampala", dateStyle: "medium", timeStyle: "short" })}.` : ""
-  return `${registrant || result.error || result.message || result.reason || "Scan processed"}${organization}${previous}`
+  return `${registrant || result.error || result.message || result.reason || "Scan processed"}${organization}${sponsor}${previous}`
 }
 
 function resultAttendance(result) {

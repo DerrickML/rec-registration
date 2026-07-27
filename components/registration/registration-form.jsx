@@ -37,6 +37,7 @@ import { CustomPhoneInput } from "./phone-input"
 
 const titles = ["Mr.", "Mrs.", "Ms.", "Dr.", "Eng.", "Rev.", "Prof."]
 const registrationTypes = ["Attendee", "Exhibitor"] //, "Sponsor"]
+const sectorOptions = ["Public", "Private", "Civil Society Organization", "Academia", "Other"]
 
 function FieldError({ message }) {
   if (!message) return null
@@ -109,6 +110,9 @@ export default function RegistrationForm() {
     otherEmail: "",
     organization: "",
     sector: [],
+    sponsorOrganization: "",
+    sponsorSector: "",
+    sponsorCouponId: "",
     city: "",
     stateRegion: "",
     country: "",
@@ -237,6 +241,9 @@ export default function RegistrationForm() {
       otherEmail: "",
       organization: "",
       sector: [],
+      sponsorOrganization: "",
+      sponsorSector: "",
+      sponsorCouponId: "",
       city: "",
       stateRegion: "",
       country: "",
@@ -395,6 +402,9 @@ export default function RegistrationForm() {
     otherEmail: existingRecord.otherEmail || "",
     organization: existingRecord.organization || "",
     sector: Array.isArray(existingRecord.sector) ? existingRecord.sector : [],
+    sponsorOrganization: "",
+    sponsorSector: "",
+    sponsorCouponId: "",
     city: existingRecord.city || "",
     stateRegion: existingRecord.stateRegion || "",
     country: existingRecord.country || "",
@@ -546,12 +556,15 @@ export default function RegistrationForm() {
         throw new Error(result.error || "Failed to validate coupon")
       }
 
+      const normalizedCouponCode = couponCode.trim().toUpperCase()
+      setCouponCode(normalizedCouponCode)
       setCouponData(result.coupon)
       setFormData((prev) => ({
         ...prev,
-        organization: result.coupon.organization,
-        sector: Array.isArray(result.coupon.sector) ? result.coupon.sector : [result.coupon.sector],
-        coupon: couponCode,
+        sponsorOrganization: result.coupon.sponsorOrganization || "",
+        sponsorSector: result.coupon.sponsorSector || "",
+        sponsorCouponId: "",
+        coupon: normalizedCouponCode,
       }))
     } catch (err) {
       setError(err.message)
@@ -561,14 +574,14 @@ export default function RegistrationForm() {
   }
 
   const clearCoupon = () => {
-    const hadAppliedCoupon = Boolean(couponData)
     setCouponCode("")
     setCouponData(null)
     setFormData((prev) => ({
       ...prev,
       coupon: "",
-      organization: hadAppliedCoupon ? "" : prev.organization,
-      sector: hadAppliedCoupon ? [] : prev.sector,
+      sponsorOrganization: "",
+      sponsorSector: "",
+      sponsorCouponId: "",
     }))
   }
 
@@ -642,7 +655,7 @@ export default function RegistrationForm() {
       }
     } else {
       // Validation for regular attendees
-      const requiredFields = ["title", "firstName", "lastName", "phone", "city", "stateRegion", "country"]
+      const requiredFields = ["title", "firstName", "lastName", "phone"]
       const missingFields = requiredFields.filter((field) => !formData[field].trim())
 
       // Add passport number validation if visa letter is required
@@ -663,6 +676,21 @@ export default function RegistrationForm() {
     }
 
     // Common validation
+    const missingOrganizationFields = ["organization", "city", "stateRegion", "country"]
+      .filter((field) => !String(formData[field] || "").trim())
+    if (missingOrganizationFields.length > 0 || !formData.sector?.length) {
+      const organizationErrors = missingOrganizationFields.reduce((result, field) => {
+        result[field] = "Required"
+        return result
+      }, {})
+      if (!formData.sector?.length) {
+        organizationErrors.sector = "Select your organization's sector"
+      }
+      setFieldErrors(organizationErrors)
+      setError("Please complete your organization and location details")
+      return
+    }
+
     if (formData.daysAttending.length === 0) {
       setFieldErrors({ daysAttending: "Select at least one day to attend" })
       setError("Please select at least one day to attend")
@@ -1275,10 +1303,10 @@ export default function RegistrationForm() {
                         </div>
                         <p className="text-sm text-gray-600">
                           {isReturningRegistration && couponRequired
-                            ? "Your previous registration does not include this conference year. Apply a valid coupon before submitting this current conference registration."
+                            ? "Your previous registration does not include this conference year. Apply a valid sponsor coupon before submitting this current conference registration."
                             : couponRequired
-                            ? "Apply your organization's coupon code before submitting this registration."
-                            : "Apply a coupon if your organization provided one. Otherwise continue with your details below."}
+                            ? "Apply the coupon supplied by your sponsoring organization before submitting this registration."
+                            : "Apply a coupon if a sponsoring organization provided one. Your own organization details are entered separately below."}
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-3">
                           <div className="relative">
@@ -1288,9 +1316,18 @@ export default function RegistrationForm() {
                               value={couponCode}
                               onChange={(e) => {
                                 setCouponCode(e.target.value)
-                                if (formData.coupon && e.target.value !== formData.coupon) {
+                                if (
+                                  formData.coupon &&
+                                  e.target.value.trim().toUpperCase() !== formData.coupon
+                                ) {
                                   setCouponData(null)
-                                  setFormData((prev) => ({ ...prev, coupon: "" }))
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    coupon: "",
+                                    sponsorOrganization: "",
+                                    sponsorSector: "",
+                                    sponsorCouponId: "",
+                                  }))
                                 }
                               }}
                               placeholder="Enter coupon code"
@@ -1334,17 +1371,39 @@ export default function RegistrationForm() {
                         <FieldError message={fieldErrors.coupon} />
                         {couponData && (
                           <div className="flex flex-wrap items-center gap-3 rounded-lg bg-white border border-gray-200 p-4 text-sm">
+                            <span className="w-full font-semibold text-gray-800">Coupon sponsorship</span>
                             <Badge variant="secondary" className="bg-[#0B7186]/10 text-[#0B7186] border-[#0B7186]/20">
                               <Building className="w-3 h-3 mr-1" />
-                              {couponData.organization}
+                              Sponsored by {couponData.sponsorOrganization}
                             </Badge>
-                            <Badge variant="secondary" className="bg-[#FFB803]/10 text-[#054653] border-[#FFB803]/20">
-                              <Globe className="w-3 h-3 mr-1" />
-                              {couponData.sector}
-                            </Badge>
+                            {couponData.sponsorSector && (
+                              <Badge variant="secondary" className="bg-[#FFB803]/10 text-[#054653] border-[#FFB803]/20">
+                                <Globe className="w-3 h-3 mr-1" />
+                                {couponData.sponsorSector}
+                              </Badge>
+                            )}
                             <span className="text-gray-500">{couponData.usersLeft} seats left</span>
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {isEditing && formData.sponsorOrganization && (
+                      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#0B7186]/20 bg-[#0B7186]/5 p-5 text-sm">
+                        <span className="w-full font-semibold text-gray-800">Coupon sponsorship</span>
+                        <Badge variant="secondary" className="bg-[#0B7186]/10 text-[#0B7186] border-[#0B7186]/20">
+                          <Building className="w-3 h-3 mr-1" />
+                          Sponsored by {formData.sponsorOrganization}
+                        </Badge>
+                        {formData.sponsorSector && (
+                          <Badge variant="secondary" className="bg-[#FFB803]/10 text-[#054653] border-[#FFB803]/20">
+                            <Globe className="w-3 h-3 mr-1" />
+                            {formData.sponsorSector}
+                          </Badge>
+                        )}
+                        <span className="text-gray-500">
+                          Sponsorship remains tied to the coupon used for this conference.
+                        </span>
                       </div>
                     )}
 
@@ -1660,7 +1719,7 @@ export default function RegistrationForm() {
 
                       <div className="space-y-2">
                         <Label htmlFor="organization" className="text-gray-700 font-medium">
-                          Organization *
+                          Your Organization / Institution *
                         </Label>
                         <div className="relative">
                           <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -1668,15 +1727,45 @@ export default function RegistrationForm() {
                             id="organization"
                             value={formData.organization}
                             onChange={(e) => setFormData((prev) => ({ ...prev, organization: e.target.value }))}
-                            className={`pl-10 h-12 border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186] ${
-                              !!couponData ? "bg-white/5 cursor-not-allowed" : "bg-white"
-                            }`}
+                            placeholder="Organization you represent"
+                            className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
                             autoComplete="organization"
                             required
-                            disabled={!!couponData}
                           />
                         </div>
+                        <p className="text-sm text-gray-500">
+                          This may be different from the organization that supplied your coupon.
+                        </p>
                         <FieldError message={fieldErrors.organization} />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="organization-sector" className="text-gray-700 font-medium">
+                          Your Organization Sector *
+                        </Label>
+                        <Select
+                          value={Array.isArray(formData.sector) ? formData.sector[0] || "" : ""}
+                          onValueChange={(value) => setFormData((prev) => ({ ...prev, sector: [value] }))}
+                        >
+                          <SelectTrigger
+                            id="organization-sector"
+                            className="h-12 bg-white border-gray-300 text-gray-800 focus:border-[#0B7186]"
+                          >
+                            <SelectValue placeholder="Select organization sector" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white border-gray-200">
+                            {sectorOptions.map((sector) => (
+                              <SelectItem
+                                key={sector}
+                                value={sector}
+                                className="text-gray-800 hover:bg-gray-100"
+                              >
+                                {sector}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FieldError message={fieldErrors.sector} />
                       </div>
 
                       {registrationType === "Exhibitor" && (

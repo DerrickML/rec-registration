@@ -232,17 +232,150 @@ describe("registration service", () => {
   it("creates a new attendee and decrements coupon once", async () => {
     const db = createDb({
       conferences: [activeConference()],
-      coupons: [{ $id: "coupon1", coupon: "SAVE10", type: "Attendee", usersLeft: 2, organization: "Org", sector: "Solar" }],
+      coupons: [{
+        $id: "coupon1",
+        coupon: "SAVE10",
+        type: "Attendee",
+        usersLeft: 2,
+        organization: "Sponsor Org",
+        sector: "Private",
+      }],
     })
 
     const svc = service(db)
     const editToken = await verifiedNewRegistrationToken(svc)
-    const result = await svc.submit(attendeeInput({ editToken }))
+    const result = await svc.submit(attendeeInput({
+      editToken,
+      organization: "Registrant Org",
+      sector: ["Academia"],
+      sponsorOrganization: "Forged Sponsor",
+      sponsorSector: "Forged Sector",
+      sponsorCouponId: "forged-id",
+    }))
 
     expect(result.status).toBe("registered")
     expect(db.tables.registrants).toHaveLength(1)
     expect(db.tables.registrants[0].conferenceYears).toEqual([2025])
+    expect(db.tables.registrants[0].organization).toBe("Registrant Org")
+    expect(db.tables.registrants[0].sector).toEqual(["Academia"])
+    expect(db.tables.registrants[0].sponsorOrganization).toBe("Sponsor Org")
+    expect(db.tables.registrants[0].sponsorSector).toBe("Private")
+    expect(db.tables.registrants[0].sponsorCouponId).toBe("coupon1")
     expect(db.tables.coupons[0].usersLeft).toBe(1)
+  })
+
+  it("returns explicit sponsorship fields in coupon previews", async () => {
+    const db = createDb({
+      conferences: [activeConference()],
+      coupons: [{
+        $id: "coupon1",
+        coupon: "SAVE10",
+        type: "Attendee",
+        usersLeft: 2,
+        organization: "Sponsor Org",
+        sector: "Private",
+      }],
+    })
+
+    const preview = await service(db).couponPreview({
+      couponCode: "save10",
+      registrationType: "Attendee",
+    })
+
+    expect(preview).toEqual({
+      valid: true,
+      coupon: {
+        sponsorOrganization: "Sponsor Org",
+        sponsorSector: "Private",
+        organization: "Sponsor Org",
+        sector: "Private",
+        usersLeft: 2,
+      },
+    })
+  })
+
+  it("rejects inactive coupons and coupons for another conference year", async () => {
+    const inactiveDb = createDb({
+      conferences: [activeConference()],
+      coupons: [{
+        $id: "coupon1",
+        coupon: "SAVE10",
+        type: "Attendee",
+        usersLeft: 2,
+        organization: "Sponsor Org",
+        sector: "Private",
+        isActive: false,
+      }],
+    })
+
+    await expect(
+      service(inactiveDb).couponPreview({ couponCode: "SAVE10", registrationType: "Attendee" })
+    ).rejects.toMatchObject({ status: 400 })
+
+    const wrongYearDb = createDb({
+      conferences: [activeConference()],
+      coupons: [{
+        $id: "coupon1",
+        coupon: "SAVE10",
+        type: "Attendee",
+        usersLeft: 2,
+        organization: "Sponsor Org",
+        sector: "Private",
+        conference: 2026,
+      }],
+    })
+
+    await expect(
+      service(wrongYearDb).couponPreview({ couponCode: "SAVE10", registrationType: "Attendee" })
+    ).rejects.toMatchObject({ status: 400 })
+  })
+
+  it("applies the same server-derived sponsorship to every exhibitor representative", async () => {
+    const db = createDb({
+      conferences: [activeConference()],
+      coupons: [{
+        $id: "coupon1",
+        coupon: "EXPO10",
+        type: "Exhibitor",
+        usersLeft: 2,
+        organization: "Exhibition Sponsor",
+        sector: "Private",
+      }],
+    })
+    const svc = service(db)
+    const editToken = await verifiedNewRegistrationToken(svc)
+    const members = [
+      {
+        title: "Ms.",
+        firstName: "One",
+        lastName: "Delegate",
+        email: "new@example.com",
+        phone: "+256700000001",
+      },
+      {
+        title: "Mr.",
+        firstName: "Two",
+        lastName: "Delegate",
+        email: "second@example.com",
+        phone: "+256700000002",
+      },
+    ]
+
+    const result = await svc.submit(attendeeInput({
+      editToken,
+      registrationType: "Exhibitor",
+      couponCode: "EXPO10",
+      organization: "Exhibitor Company",
+      sector: ["Private"],
+      members,
+    }))
+
+    expect(result.count).toBe(2)
+    expect(db.tables.registrants).toHaveLength(2)
+    expect(db.tables.registrants.every((row) => row.organization === "Exhibitor Company")).toBe(true)
+    expect(db.tables.registrants.every((row) => row.sponsorOrganization === "Exhibition Sponsor")).toBe(true)
+    expect(db.tables.registrants.every((row) => row.sponsorCouponId === "coupon1")).toBe(true)
+    expect(db.tables.coupons[0].usersLeft).toBe(0)
   })
 
   it("rejects new registration submission before email verification", async () => {
@@ -268,6 +401,9 @@ describe("registration service", () => {
     expect(result.status).toBe("registered")
     expect(db.tables.registrants).toHaveLength(1)
     expect(db.tables.registrants[0].coupon).toBeNull()
+    expect(db.tables.registrants[0].sponsorOrganization).toBeNull()
+    expect(db.tables.registrants[0].sponsorSector).toBeNull()
+    expect(db.tables.registrants[0].sponsorCouponId).toBeNull()
     expect(db.tables.coupons).toHaveLength(0)
   })
 
@@ -295,6 +431,9 @@ describe("registration service", () => {
           conferenceYears: [2025],
           coupon: "PREVIOUS",
           registrationType: "Attendee",
+          sponsorOrganization: "Original Sponsor",
+          sponsorSector: "Public",
+          sponsorCouponId: "previous-coupon",
         },
       ],
       coupons: [{ $id: "coupon1", coupon: "SAVE10", type: "Attendee", usersLeft: 2, organization: "Org", sector: "Solar" }],
@@ -302,12 +441,21 @@ describe("registration service", () => {
 
     const svc = service(db)
     const editToken = await verifiedExistingRegistrationToken(svc, "old@example.com")
-    const result = await svc.submit(attendeeInput({ email: "old@example.com", couponCode: "", editToken }))
+    const result = await svc.submit(attendeeInput({
+      email: "old@example.com",
+      couponCode: "",
+      editToken,
+      sponsorOrganization: "Forged Sponsor",
+      sponsorCouponId: "forged-coupon",
+    }))
 
     expect(result.status).toBe("registered")
     expect(db.tables.registrants).toHaveLength(1)
     expect(db.tables.registrants[0].conferenceYears).toEqual([2025])
     expect(db.tables.registrants[0].coupon).toBe("PREVIOUS")
+    expect(db.tables.registrants[0].sponsorOrganization).toBe("Original Sponsor")
+    expect(db.tables.registrants[0].sponsorSector).toBe("Public")
+    expect(db.tables.registrants[0].sponsorCouponId).toBe("previous-coupon")
     expect(db.tables.coupons[0].usersLeft).toBe(2)
   })
 
@@ -342,9 +490,19 @@ describe("registration service", () => {
           email: "old@example.com",
           conferenceYears: [2024],
           registrationType: "Attendee",
+          sponsorOrganization: "Previous Sponsor",
+          sponsorSector: "Public",
+          sponsorCouponId: "previous-coupon",
         },
       ],
-      coupons: [{ $id: "coupon1", coupon: "SAVE10", type: "Attendee", usersLeft: 2, organization: "Org", sector: "Solar" }],
+      coupons: [{
+        $id: "coupon1",
+        coupon: "SAVE10",
+        type: "Attendee",
+        usersLeft: 2,
+        organization: "Current Sponsor",
+        sector: "Private",
+      }],
     })
 
     const svc = service(db)
@@ -355,7 +513,33 @@ describe("registration service", () => {
     expect(db.tables.registrants).toHaveLength(1)
     expect(db.tables.registrants[0].conferenceYears).toEqual([2024, 2025])
     expect(db.tables.registrants[0].coupon).toBe("SAVE10")
+    expect(db.tables.registrants[0].sponsorOrganization).toBe("Current Sponsor")
+    expect(db.tables.registrants[0].sponsorSector).toBe("Private")
+    expect(db.tables.registrants[0].sponsorCouponId).toBe("coupon1")
     expect(db.tables.coupons[0].usersLeft).toBe(1)
+  })
+
+  it("requires the registrant's own organization sector even when a coupon has one", async () => {
+    const db = createDb({
+      conferences: [activeConference()],
+      coupons: [{
+        $id: "coupon1",
+        coupon: "SAVE10",
+        type: "Attendee",
+        usersLeft: 2,
+        organization: "Sponsor Org",
+        sector: "Private",
+      }],
+    })
+
+    const svc = service(db)
+    const editToken = await verifiedNewRegistrationToken(svc)
+
+    await expect(
+      svc.submit(attendeeInput({ editToken, sector: [] }))
+    ).rejects.toMatchObject({ status: 400 })
+    expect(db.tables.registrants).toHaveLength(0)
+    expect(db.tables.coupons[0].usersLeft).toBe(2)
   })
 
   it("rejects coupon oversell", async () => {

@@ -31,6 +31,7 @@ async function fetchScannerJson(url, { token, ...options } = {}) {
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) {
     const error = new Error(payload.error || "Request failed")
+    error.status = response.status
     error.code = payload.code || ""
     error.details = payload.details || {}
     throw error
@@ -141,9 +142,16 @@ export default function PublicScannerPage() {
       const parsed = JSON.parse(stored)
       if (parsed?.token) {
         setSession(parsed)
-        loadEvents(parsed.token).catch(() => {
-          window.localStorage.removeItem(sessionStorageKey)
-          setSession(null)
+        loadEvents(parsed.token).catch((err) => {
+          if ([401, 403].includes(err.status)) {
+            window.localStorage.removeItem(sessionStorageKey)
+            setSession(null)
+            setEvents([])
+            setEventId("")
+            setError(`${err.message || "Scanner access is no longer active."} Sign in again.`)
+            return
+          }
+          setError(err.message || "Could not restore the scanner session.")
         })
       }
     } catch {
@@ -255,6 +263,15 @@ export default function PublicScannerPage() {
       setResult(data)
       setManualPayload("")
     } catch (err) {
+      if ([401, 403].includes(err.status)) {
+        window.localStorage.removeItem(sessionStorageKey)
+        setSession(null)
+        setEvents([])
+        setEventId("")
+        setResult(null)
+        setError(`${err.message || "Scanner access is no longer active."} Sign in again.`)
+        return
+      }
       setResult({
         status: "rejected",
         reason: err.code || "scan_failed",

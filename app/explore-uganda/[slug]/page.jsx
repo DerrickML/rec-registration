@@ -1,11 +1,11 @@
 import Link from "next/link"
 import Image from "next/image"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { CalendarDays, MapPin, Clock3, ArrowDown, ArrowLeft } from "lucide-react"
 import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
 import { getExcursion } from "@/lib/excursions-server"
-import { excursionEdition } from "@/lib/excursions"
+import { excursionDestination, excursionEdition, usesExternalDestination } from "@/lib/excursions"
 import { createRouteMetadata } from "@/lib/seo"
 import { ExcursionPageView, PartnerLink } from "@/components/excursions/excursion-engagement"
 import styles from "@/components/excursions/excursions.module.css"
@@ -13,11 +13,17 @@ export const dynamic = "force-dynamic"
 export async function generateMetadata({ params }) {
   const excursion = await getExcursion((await params).slug)
   if (!excursion) return { title: "Excursion not found", robots: { index: false } }
+  if (usesExternalDestination(excursion)) return { title: excursion.content.title, robots: { index: false, follow: true } }
   return createRouteMetadata({ title: `${excursion.content.title} / ${excursionEdition(excursion)}`, description: excursion.content.introduction, path: `/explore-uganda/${excursion.slug}`, image: excursion.content.heroImage })
 }
-export default async function ExcursionPage({ params }) {
+export default async function ExcursionPage({ params, searchParams }) {
   const excursion = await getExcursion((await params).slug)
   if (!excursion) notFound()
+  if (usesExternalDestination(excursion)) {
+    const destination = excursionDestination(excursion, (await searchParams)?.from)
+    if (!destination) notFound()
+    redirect(destination)
+  }
   const { content, conference } = excursion
   const past = excursion.status === "archived" || Date.now() >= Date.parse(excursion.endsAt)
   return <div className={styles.page}>

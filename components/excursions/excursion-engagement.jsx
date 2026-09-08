@@ -1,10 +1,21 @@
 "use client"
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { ExternalLink } from "lucide-react"
-import { excursionSource, partnerDestination } from "@/lib/excursions"
+import { excursionDestination, excursionSource, partnerDestination, usesExternalDestination } from "@/lib/excursions"
 import styles from "./excursions.module.css"
 function event(slug, kind, source) {
   fetch(`/api/excursions/${encodeURIComponent(slug)}/events`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, source }), keepalive: true }).catch(() => {})
+}
+export function ExcursionLink({ excursion, source = "direct", children, onClick, ...props }) {
+  const href = excursionDestination(excursion, source)
+  if (!href) return null
+  if (!usesExternalDestination(excursion)) return <Link {...props} href={href} onClick={onClick}>{children}</Link>
+  const record = e => {
+    onClick?.(e)
+    if (!e.defaultPrevented && (e.type !== "auxclick" || e.button === 1)) event(excursion.slug, "outbound", excursionSource(source))
+  }
+  return <a {...props} href={href} onClick={record} onAuxClick={record}>{children}</a>
 }
 export function ExcursionPageView({ slug }) {
   useEffect(() => {

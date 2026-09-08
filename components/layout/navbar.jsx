@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/sheet"
 import { useExcursion } from "@/components/excursions/excursion-provider"
 import { excursionPath } from "@/lib/excursions"
+import { ExcursionLink } from "@/components/excursions/excursion-engagement"
 
 const NAV_LINKS = [
   { href: "/", label: "Home", exact: true },
@@ -32,13 +33,18 @@ export default function Navbar({ conference }) {
   const links = excursion?.content.placements.includes("nav")
     ? [
         ...NAV_LINKS,
-        { href: excursionPath(excursion, "nav"), label: "Explore Uganda" },
+        { href: excursionPath(excursion, "nav"), label: "Explore Uganda", excursion: true },
       ]
     : NAV_LINKS
   const navLinks = links.map((link) => {
     const active = link.exact
       ? pathname === link.href
       : pathname.startsWith(link.href.split("?")[0])
+    if (link.excursion) return (
+      <ExcursionLink key="excursion" excursion={excursion} source="nav" aria-current={active ? "page" : undefined} onClick={() => setMobileOpen(false)}>
+        {link.label}
+      </ExcursionLink>
+    )
     return (
       <Link
         key={link.href}

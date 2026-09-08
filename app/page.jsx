@@ -16,7 +16,7 @@ import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
 import { EventInformation } from "@/components/layout/page-hero"
 import ConferencePhoto from "@/components/layout/conference-photo"
-import ExcursionCta from "@/components/excursions/excursion-cta"
+import ExcursionCta, { ExcursionHeroButton } from "@/components/excursions/excursion-cta"
 import {
   PageErrorState,
   PageLoadingState,
@@ -125,6 +125,7 @@ export default function HomePage() {
               >
                 View the program <ArrowRight size={18} />
               </Link>
+              <ExcursionHeroButton />
             </div>
             {!conference.registrationOpen && (
               <p className="hero-closed">

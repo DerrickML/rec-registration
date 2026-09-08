@@ -20,6 +20,22 @@ use the same control colors without changing their authorization or business rul
 - Removed placeholder statistics, obsolete animation effects and decorative gradient
   panels. Existing excursion promotion dates and placement configuration are unchanged.
 
+## Excursion Destinations
+
+HR controls excursion links under **REC > Excursions > Publication**. External mode
+sends navigation, footer, enabled section CTAs and the optional home hero button directly
+to the configured HTTPS URL. Source attribution and best-effort click metrics remain.
+Saved excursion content is retained. Switching the destination back to the REC page
+restores it; missing destination settings on legacy records default to the REC page.
+
+Old excursion routes use temporary Next.js redirects in external mode, preserving
+allowlisted `from` attribution and ignoring arbitrary target query parameters. They
+are excluded from the sitemap. Invalid external URLs fail closed. The hero uses the
+separate `home_hero` placement; visibility still respects publication and promotion dates.
+Deploy the updated HR and public applications together; no database schema change is
+required. The active REC26 configuration was switched to LocalMotion with the hero
+placement enabled through the authenticated HR editor.
+
 ## Photo Sources
 
 Selected from the public [REC25 & EXPO album](https://photos.app.goo.gl/dHpY6Tq2ts6xWtaS9),
@@ -56,7 +72,7 @@ Browser checks completed at 320px, 390px, 768px and desktop widths include:
 - Program download page, embedded schedule, scanner login and closed registration.
 - Reduced-motion preference and readable foreground/background brand colors.
 
-The automated suite has 46 passing tests. Final lint, type checking and production
+The automated suite has 58 passing tests. Final lint, type checking and production
 build should also be run before release. Existing unrelated lint warnings are
 not suppressed by this update.
 

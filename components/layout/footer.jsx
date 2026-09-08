@@ -4,7 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowUpRight, Mail, Phone } from "lucide-react"
 import { useExcursion } from "@/components/excursions/excursion-provider"
-import { excursionPath } from "@/lib/excursions"
+import { ExcursionLink } from "@/components/excursions/excursion-engagement"
 import { conferenceExtras } from "@/lib/conference-display"
 
 export default function Footer({ conference }) {
@@ -57,9 +57,9 @@ export default function Footer({ conference }) {
               <Link href="/sponsors">Sponsors & partners</Link>
               <Link href="/venue">Venue & travel</Link>
               {excursion?.content.placements.includes("footer") && (
-                <Link href={excursionPath(excursion, "footer")}>
+                <ExcursionLink excursion={excursion} source="footer">
                   Explore Uganda
-                </Link>
+                </ExcursionLink>
               )}
               {conference?.registrationOpen && (
                 <Link href="/register">Register to attend</Link>

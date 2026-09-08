@@ -4,6 +4,7 @@ import {
   publicSitemapRoutes,
 } from "@/lib/seo"
 import { getExcursionCatalog } from "@/lib/excursions-server"
+import { usesExternalDestination } from "@/lib/excursions"
 
 export default async function sitemap() {
   const conference = await getActiveConferenceForSeo()
@@ -17,5 +18,5 @@ export default async function sitemap() {
     lastModified,
     changeFrequency: route.changeFrequency,
     priority: route.priority,
-  })), ...excursions.documents.map(excursion => ({ url: absoluteUrl(`/explore-uganda/${excursion.slug}`), changeFrequency: "weekly", priority: 0.6 }))]
+  })), ...excursions.documents.filter(excursion => !usesExternalDestination(excursion)).map(excursion => ({ url: absoluteUrl(`/explore-uganda/${excursion.slug}`), changeFrequency: "weekly", priority: 0.6 }))]
 }

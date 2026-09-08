@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { CalendarX, Filter } from "lucide-react"
-import { Tabs, TabsContent } from "@/components/ui/tabs"
 import {
   formatTimeWithTimezone,
   getDayDate,
@@ -49,15 +48,15 @@ export default function ProgramSchedule({ conference, program, sessions, timeBlo
   const isTimeSlotExpanded = (timeKey) => expandedTimeSlots[timeKey] !== false
 
   return (
-    <section className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-      <div className="border-b border-gray-200 bg-white px-5 py-5 sm:px-6">
+    <section className={`program-schedule ${compact ? "schedule-embedded" : ""}`}>
+      <div className="schedule-heading">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-gray-950 sm:text-3xl">
-              Sessions Schedule
+            <h2 className="text-2xl font-bold tracking-normal text-gray-950 sm:text-3xl">
+              Sessions & activities
             </h2>
             <p className="mt-1 text-sm text-gray-600">
-              Browse {sessions.length} published {sessions.length === 1 ? "session" : "sessions"} by day, venue, and program block.
+              All conference times are in East Africa Time (UTC+3).
             </p>
           </div>
 
@@ -68,7 +67,7 @@ export default function ProgramSchedule({ conference, program, sessions, timeBlo
               <select
                 value={selectedHall}
                 onChange={(event) => setSelectedHall(event.target.value)}
-                className="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-800 outline-none transition-all hover:border-gray-400 focus:border-[#0B7186] focus:ring-2 focus:ring-[#0B7186]/[0.15] sm:w-56"
+                className="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-800 outline-none transition-all hover:border-gray-400 focus:border-[#176F91] focus:ring-2 focus:ring-[#176F91]/[0.15] sm:w-56"
               >
                 <option value="all">All Halls</option>
                 {halls.map((hall) => (
@@ -82,9 +81,11 @@ export default function ProgramSchedule({ conference, program, sessions, timeBlo
         </div>
       </div>
 
-      <Tabs value={selectedDay ? String(selectedDay) : "none"} className="w-full">
-        <div className="border-b border-gray-200 bg-slate-50 px-4 py-4 sm:px-6">
+      <div className="w-full">
+        <div className="schedule-days">
           <div
+            role="group"
+            aria-label="Conference days"
             className="grid gap-3"
             style={{
               gridTemplateColumns: compact
@@ -105,8 +106,8 @@ export default function ProgramSchedule({ conference, program, sessions, timeBlo
           </div>
         </div>
 
-        <div className="px-4 py-5 sm:px-6 sm:py-6">
-          <TabsContent value={selectedDay ? String(selectedDay) : "none"} className="mt-0">
+        <div className="schedule-body">
+          <div className="mt-0">
             {usesTimeBlocks ? (
               scheduleRows.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-gray-300 bg-slate-50 px-6 py-12 text-center">
@@ -152,9 +153,9 @@ export default function ProgramSchedule({ conference, program, sessions, timeBlo
                 ))}
               </div>
             )}
-          </TabsContent>
+          </div>
         </div>
-      </Tabs>
+      </div>
     </section>
   )
 }

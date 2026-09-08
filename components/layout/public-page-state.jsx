@@ -1,17 +1,55 @@
 "use client"
 
+import { useEffect, useState } from "react"
+import Image from "next/image"
 import Link from "next/link"
-import { AlertCircle, ArrowRight, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { ArrowLeft, RotateCcw, AlertCircle } from "lucide-react"
 
-export function PageLoadingState({ message = "Loading conference information..." }) {
+export function PageLoadingState({
+  message = "Loading conference information...",
+  inline = false,
+}) {
+  const [slow, setSlow] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setSlow(true), 12000)
+    return () => clearTimeout(timer)
+  }, [])
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm text-center">
-        <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-lg bg-[#0B7186] shadow-md shadow-[#0B7186]/20">
-          <Loader2 className="h-6 w-6 animate-spin text-white" />
+    <div
+      className={`page-loading ${inline ? "loading-inline" : ""}`}
+      aria-busy="true"
+    >
+      <div className="loading-brand">
+        <Image src="/NREP.png" alt="NREP" width={56} height={56} />
+        <div>
+          <strong>REC & EXPO</strong>
+          <span>Renewable Energy Conference</span>
         </div>
-        <p className="text-sm font-medium text-gray-600">{message}</p>
+      </div>
+      <div className="loading-track" aria-hidden="true">
+        <span />
+      </div>
+      <p role="status">{message}</p>
+      {slow && (
+        <div className="loading-slow">
+          <p>This is taking longer than usual. Please check your connection.</p>
+          <button
+            className="site-text-link"
+            onClick={() => window.location.reload()}
+          >
+            <RotateCcw size={16} />
+            Try again
+          </button>
+        </div>
+      )}
+      <div className="loading-skeleton" aria-hidden="true">
+        <span />
+        <span />
+        <div>
+          <span />
+          <span />
+          <span />
+        </div>
       </div>
     </div>
   )
@@ -21,23 +59,27 @@ export function PageErrorState({
   title = "Content not available",
   message = "We could not load the requested conference information.",
   actionHref = "/",
-  actionLabel = "Back to Home",
+  actionLabel = "Back to home",
 }) {
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-6 text-center shadow-sm">
-        <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-lg bg-red-50 text-red-600">
-          <AlertCircle className="h-6 w-6" />
-        </div>
-        <h1 className="mb-2 text-xl font-bold text-gray-950">{title}</h1>
-        <p className="mb-6 text-sm leading-6 text-gray-600">{message}</p>
-        <Link href={actionHref}>
-          <Button className="h-11 rounded-lg bg-[#0B7186] px-5 text-sm font-semibold text-white hover:bg-[#054653]">
-            {actionLabel}
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
+    <main className="page-error" id="main-content">
+      <Image src="/NREP.png" alt="NREP" width={64} height={64} />
+      <AlertCircle size={28} className="text-primary" />
+      <h1>{title}</h1>
+      <p>{message}</p>
+      <div className="button-row">
+        <button
+          className="site-button"
+          onClick={() => window.location.reload()}
+        >
+          <RotateCcw size={17} />
+          Try again
+        </button>
+        <Link href={actionHref} className="site-text-link">
+          <ArrowLeft size={17} />
+          {actionLabel}
         </Link>
       </div>
-    </div>
+    </main>
   )
 }

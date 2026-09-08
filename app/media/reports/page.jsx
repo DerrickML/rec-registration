@@ -1,142 +1,137 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, BookOpen, CalendarDays } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
 import PageHero from "@/components/layout/page-hero"
-import { PageErrorState, PageLoadingState } from "@/components/layout/public-page-state"
+import ConferenceSelect from "@/components/layout/conference-select"
+import {
+  PageErrorState,
+  PageLoadingState,
+} from "@/components/layout/public-page-state"
 import ReportDirectory from "@/components/reports/report-directory"
 import { apiService } from "@/lib/api-service"
 import { getReportsSiteConfig } from "@/lib/public-site-config"
 
-function conferenceName(conference) {
-  return conference?.shortName || conference?.title || conference?.fullName || `REC ${conference?.year || ""}`
-}
-
 export default function ConferenceReportsPage() {
   const [siteConference, setSiteConference] = useState(null)
-  const [reportConferences, setReportConferences] = useState([])
-  const [selectedConferenceId, setSelectedConferenceId] = useState("")
+  const [conferences, setConferences] = useState([])
+  const [selectedId, setSelectedId] = useState("")
   const [reports, setReports] = useState([])
   const [loading, setLoading] = useState(true)
   const [reportsLoading, setReportsLoading] = useState(false)
   const [error, setError] = useState("")
-
-  const selectedConference = useMemo(
-    () => reportConferences.find((conference) => conference.$id === selectedConferenceId) || null,
-    [reportConferences, selectedConferenceId]
+  const selected = conferences.find(
+    (conference) => conference.$id === selectedId
   )
-  const pageConfig = getReportsSiteConfig(siteConference)
+  const config = getReportsSiteConfig(siteConference)
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const conferenceData = await apiService.getReportConferences()
-        const conferences = conferenceData.documents || []
-        setReportConferences(conferences)
-        setSelectedConferenceId(conferences[0]?.$id || "")
-        setSiteConference(conferenceData.siteConference || conferences[0] || null)
-      } catch (err) {
-        setError(err.message || "Failed to load conference reports.")
-      } finally {
-        setLoading(false)
-      }
+    let current = true
+    apiService
+      .getReportConferences()
+      .then((data) => {
+        if (!current) return
+        const list = data.documents || []
+        setConferences(list)
+        setSelectedId(list[0]?.$id || "")
+        setSiteConference(data.siteConference || list[0] || null)
+      })
+      .catch((err) => {
+        if (current) setError(err.message)
+      })
+      .finally(() => {
+        if (current) setLoading(false)
+      })
+    return () => {
+      current = false
     }
-    load()
   }, [])
-
   useEffect(() => {
-    if (!selectedConferenceId) {
-      setReports([])
-      return
+    if (!selectedId) return
+    let current = true
+    setReportsLoading(true)
+    setError("")
+    apiService
+      .getConferenceReports(selectedId, { limit: 100 })
+      .then((data) => {
+        if (current) setReports(data.documents || [])
+      })
+      .catch((err) => {
+        if (current) setError(err.message)
+      })
+      .finally(() => {
+        if (current) setReportsLoading(false)
+      })
+    return () => {
+      current = false
     }
-    const loadReports = async () => {
-      setReportsLoading(true)
-      setError("")
-      try {
-        const data = await apiService.getConferenceReports(selectedConferenceId, { limit: 100 })
-        setReports(data.documents || [])
-      } catch (err) {
-        setError(err.message || "Failed to load reports for this conference.")
-      } finally {
-        setReportsLoading(false)
-      }
-    }
-    loadReports()
-  }, [selectedConferenceId])
-
-  if (loading) return <PageLoadingState message="Loading conference reports..." />
-
-  if (error && !siteConference) {
-    return <PageErrorState title="Reports unavailable" message={error} />
-  }
-
-  if (!siteConference) {
-    return <PageErrorState title="Reports unavailable" message="No conference information is available." />
-  }
-
+  }, [selectedId])
+  if (loading)
+    return <PageLoadingState message="Loading conference reports..." />
+  if (!siteConference)
+    return (
+      <PageErrorState
+        title="Reports unavailable"
+        message={error || "No conference information is available."}
+      />
+    )
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="bg-white">
       <Navbar conference={siteConference} />
       <PageHero
-        eyebrow="Conference Publications"
-        title={pageConfig.pageTitle}
-        subtitle={pageConfig.pageDescription}
+        title={config.pageTitle}
+        eyebrow="Reports & publications"
+        subtitle={config.pageDescription}
         conference={siteConference}
-        backgroundImage={siteConference.heroImageUrl}
+        photo="launch"
+        showEventInfo={false}
       />
-
-      <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
-        <div className="grid min-w-0 gap-5 rounded-lg border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-[minmax(0,1fr)_minmax(260px,420px)] md:items-end">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wide text-[#0B7186]">
-              <BookOpen className="h-4 w-4" /> Report Archive
+      <main>
+        <section className="site-container pt-10">
+          <div className="archive-toolbar">
+            <div>
+              <p className="site-kicker">Knowledge from each edition</p>
+              <h2 className="text-2xl font-semibold leading-snug">
+                {selected?.title || selected?.shortName || "Conference reports"}
+              </h2>
+              <p className="mt-2 text-sm text-gray-600">
+                {selected?.reportCount || 0} published{" "}
+                {selected?.reportCount === 1 ? "report" : "reports"}
+              </p>
+              <Link href="/media" className="site-text-link mt-4">
+                <ArrowLeft size={16} />
+                Albums & videos
+              </Link>
             </div>
-            <h2 className="mt-2 break-words text-xl font-extrabold text-slate-950">
-              {selectedConference ? conferenceName(selectedConference) : "Conference reports"}
-            </h2>
-            <p className="mt-1 flex items-center gap-2 text-sm text-slate-600">
-              <CalendarDays className="h-4 w-4 flex-shrink-0 text-[#0B7186]" />
-              {selectedConference
-                ? `${selectedConference.reportCount || reports.length} published report${selectedConference.reportCount === 1 ? "" : "s"}`
-                : "No published reports are available yet."}
-            </p>
+            <ConferenceSelect
+              value={selectedId}
+              onValueChange={(value) => {
+                setSelectedId(value)
+                setReportsLoading(true)
+              }}
+              conferences={conferences}
+              label="View reports from"
+              countKey="reportCount"
+            />
           </div>
-
-          <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">
-            <span>View reports from</span>
-            <select
-              value={selectedConferenceId}
-              onChange={(event) => setSelectedConferenceId(event.target.value)}
-              disabled={!reportConferences.length}
-              className="h-11 w-full min-w-0 max-w-full truncate rounded-md border border-slate-300 bg-slate-50 px-3 text-sm font-semibold text-slate-900 outline-none focus:border-[#0B7186] focus:ring-2 focus:ring-[#0B7186]/20 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {!reportConferences.length && <option value="">No report conferences</option>}
-              {reportConferences.map((conference) => (
-                <option key={conference.$id} value={conference.$id}>
-                  {conferenceName(conference)} ({conference.reportCount})
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <div className="mt-4">
-          <Link href="/media" className="inline-flex items-center gap-2 text-sm font-extrabold text-[#0B7186] hover:text-[#054653]">
-            <ArrowLeft className="h-4 w-4" /> Back to albums and videos
-          </Link>
-        </div>
-      </section>
-
-      {error && (
-        <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
-          <div className="border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">{error}</div>
-        </div>
-      )}
-
-      {reportsLoading ? <PageLoadingState message="Loading selected conference reports..." /> : <ReportDirectory reports={reports} />}
+        </section>
+        {error && (
+          <div className="site-container mt-6" role="alert">
+            {error}
+          </div>
+        )}
+        {reportsLoading ? (
+          <PageLoadingState
+            inline
+            message="Loading selected conference reports..."
+          />
+        ) : (
+          <ReportDirectory reports={reports} />
+        )}
+      </main>
       <Footer conference={siteConference} />
     </div>
   )

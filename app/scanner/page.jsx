@@ -75,18 +75,18 @@ function AttendanceSummary({ result }) {
   if (!attendance) return null
 
   return (
-    <div className="mt-4 grid gap-2 rounded-xl bg-white/70 p-3 text-sm">
+    <div className="mt-4 grid gap-2 rounded-lg bg-white/70 p-3 text-sm">
       <div className="grid gap-1 sm:grid-cols-[130px_minmax(0,1fr)]">
-        <span className="text-xs font-extrabold uppercase tracking-wide text-slate-500">Registered days</span>
+        <span className="text-xs font-semibold uppercase tracking-normal text-slate-500">Registered days</span>
         <strong className="break-words text-slate-950">{formatDays(attendance.registeredDays)}</strong>
       </div>
       <div className="grid gap-1 sm:grid-cols-[130px_minmax(0,1fr)]">
-        <span className="text-xs font-extrabold uppercase tracking-wide text-slate-500">Required event days</span>
+        <span className="text-xs font-semibold uppercase tracking-normal text-slate-500">Required event days</span>
         <strong className="break-words text-slate-950">{formatDays(attendance.requiredDays)}</strong>
       </div>
       {attendance.matchedDays?.length > 0 && (
         <div className="grid gap-1 sm:grid-cols-[130px_minmax(0,1fr)]">
-          <span className="text-xs font-extrabold uppercase tracking-wide text-slate-500">Matched days</span>
+          <span className="text-xs font-semibold uppercase tracking-normal text-slate-500">Matched days</span>
           <strong className="break-words text-slate-950">{formatDays(attendance.matchedDays)}</strong>
         </div>
       )}
@@ -369,15 +369,15 @@ export default function PublicScannerPage() {
   }
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#054653] px-3 py-4 text-slate-950 sm:px-6 sm:py-5 lg:px-8">
+    <main className="scanner-surface min-h-screen px-3 py-4 text-slate-950 sm:px-6 sm:py-5 lg:px-8">
       <section className="mx-auto grid w-full min-w-0 max-w-5xl gap-4 sm:gap-5">
         <header className="flex flex-col gap-4 py-4 text-white sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <Link href="/" className="mb-3 inline-flex items-center gap-2 text-sm font-bold text-white/75 hover:text-white">
-              <BadgeCheck className="h-4 w-4 text-[#FFB803]" />
+              <BadgeCheck className="h-4 w-4 text-[#EFA74F]" />
               REC & Expo
             </Link>
-            <h1 className="break-words text-3xl font-extrabold leading-tight sm:text-5xl sm:leading-none">Conference Scanner</h1>
+            <h1 className="break-words text-3xl font-semibold leading-tight sm:text-5xl sm:leading-none">Conference Scanner</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70">
               Sign in with your assigned email, select a scan point, then scan attendee QR badges.
             </p>
@@ -391,19 +391,19 @@ export default function PublicScannerPage() {
         </header>
 
         {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
             {error}
           </div>
         )}
 
         {!session ? (
-          <section className="w-full min-w-0 rounded-2xl border border-white/20 bg-white p-4 shadow-2xl shadow-black/20 sm:p-7">
+          <section className="w-full min-w-0 rounded-lg border border-white/20 bg-white p-4 shadow-sm shadow-black/20 sm:p-7">
             <div className="mb-5 flex items-start gap-3">
-              <div className="rounded-xl bg-[#0B7186]/10 p-3 text-[#0B7186]">
+              <div className="rounded-lg bg-[#176F91]/10 p-3 text-[#176F91]">
                 <ShieldCheck className="h-6 w-6" />
               </div>
               <div>
-                <h2 className="text-xl font-extrabold text-slate-950">Scanner Access</h2>
+                <h2 className="text-xl font-semibold text-slate-950">Scanner Access</h2>
                 <p className="mt-1 text-sm leading-6 text-slate-600">Use the email address assigned by the REC admin team.</p>
               </div>
             </div>
@@ -412,7 +412,7 @@ export default function PublicScannerPage() {
               <form className="grid gap-4" onSubmit={lookupConferences}>
                 <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">
                   Email
-                  <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 focus-within:border-[#0B7186]">
+                  <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 focus-within:border-[#176F91]">
                     <Mail className="h-4 w-4 text-slate-400" />
                     <input
                       type="email"
@@ -431,7 +431,7 @@ export default function PublicScannerPage() {
                     <select
                       value={conferenceId}
                       onChange={(event) => setConferenceId(event.target.value)}
-                      className="h-11 w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#0B7186]"
+                      className="h-11 w-full min-w-0 max-w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#176F91]"
                     >
                       {conferences.map((conference) => (
                         <option key={conference.$id} value={conference.$id}>{conference.title || `REC ${conference.year}`}</option>
@@ -441,7 +441,7 @@ export default function PublicScannerPage() {
                 )}
 
                 <div className="flex flex-col gap-2 sm:flex-row">
-                  <Button type="submit" className="h-11 w-full rounded-lg bg-[#0B7186] font-bold text-white hover:bg-[#054653] sm:w-auto" disabled={loading === "lookup"}>
+                  <Button type="submit" className="h-11 w-full rounded-lg bg-[#176F91] font-bold text-white hover:bg-[#0B5E78] sm:w-auto" disabled={loading === "lookup"}>
                     {loading === "lookup" ? <RefreshCcw className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
                     Check Access
                   </Button>
@@ -460,14 +460,14 @@ export default function PublicScannerPage() {
                   <input
                     value={otpCode}
                     onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-                    className="h-14 rounded-xl border border-slate-200 bg-slate-50 px-3 text-center text-2xl font-extrabold tracking-[0.35em] outline-none focus:border-[#0B7186]"
+                    className="h-14 rounded-lg border border-slate-200 bg-slate-50 px-3 text-center text-2xl font-semibold tracking-[0.35em] outline-none focus:border-[#176F91]"
                     placeholder="000000"
                     inputMode="numeric"
                     required
                   />
                 </label>
                 <div className="flex flex-col gap-2 sm:flex-row">
-                  <Button type="submit" className="h-11 w-full rounded-lg bg-[#0B7186] font-bold text-white hover:bg-[#054653] sm:w-auto" disabled={loading === "verify" || otpCode.length !== 6}>
+                  <Button type="submit" className="h-11 w-full rounded-lg bg-[#176F91] font-bold text-white hover:bg-[#0B5E78] sm:w-auto" disabled={loading === "verify" || otpCode.length !== 6}>
                     {loading === "verify" ? <RefreshCcw className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
                     Verify Code
                   </Button>
@@ -479,10 +479,10 @@ export default function PublicScannerPage() {
             )}
           </section>
         ) : (
-          <section className="grid w-full min-w-0 gap-4 rounded-2xl border border-white/20 bg-white p-4 shadow-2xl shadow-black/20 sm:gap-5 sm:p-7">
+          <section className="grid w-full min-w-0 gap-4 rounded-lg border border-white/20 bg-white p-4 shadow-sm shadow-black/20 sm:gap-5 sm:p-7">
             <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(240px,280px)]">
               <div className="min-w-0">
-                <h2 className="text-2xl font-extrabold text-slate-950">{session.conference?.title || "Conference Scanner"}</h2>
+                <h2 className="text-2xl font-semibold text-slate-950">{session.conference?.title || "Conference Scanner"}</h2>
                 <p className="mt-1 text-sm text-slate-600">{session.operator?.name || session.operator?.email}</p>
               </div>
               <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">
@@ -493,7 +493,7 @@ export default function PublicScannerPage() {
                     setEventId(event.target.value)
                     setResult(null)
                   }}
-                  className="h-11 w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#0B7186]"
+                  className="h-11 w-full min-w-0 max-w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#176F91]"
                 >
                   {events.map((event) => (
                     <option key={event.$id} value={event.$id}>{event.name}</option>
@@ -503,18 +503,18 @@ export default function PublicScannerPage() {
             </div>
 
             {activeEvent && (
-              <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
-                <div className="font-extrabold text-slate-950">{activeEvent.name}</div>
+              <div className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
+                <div className="font-semibold text-slate-950">{activeEvent.name}</div>
                 <div className="mt-1 text-slate-600">
                   {[activeEvent.type, activeEvent.venue, activeEvent.day ? `Day ${activeEvent.day}` : ""].filter(Boolean).join(" · ")}
                 </div>
-                <div className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-extrabold ${activeEvent.isCurrentlyOpen ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>
+                <div className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${activeEvent.isCurrentlyOpen ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>
                   {activeEvent.isCurrentlyOpen ? "Open for scanning" : activeEvent.availabilityMessage || "Not open for scanning"}
                 </div>
               </div>
             )}
 
-            <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-950">
+            <div className="min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-950">
               <video ref={videoRef} className={`${cameraActive ? "block" : "hidden"} min-h-[320px] w-full object-cover`} muted playsInline />
               {!cameraActive && (
                 <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 p-8 text-center text-white/75">
@@ -525,14 +525,14 @@ export default function PublicScannerPage() {
             </div>
 
             {cameraError && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
                 {cameraError}
               </div>
             )}
 
             <div className="flex flex-col gap-2 sm:flex-row">
               {!cameraActive ? (
-                <Button className="h-11 w-full rounded-lg bg-[#0B7186] font-bold text-white hover:bg-[#054653] sm:w-auto" onClick={startCamera} disabled={!eventId || !canScanSelectedEvent}>
+                <Button className="h-11 w-full rounded-lg bg-[#176F91] font-bold text-white hover:bg-[#0B5E78] sm:w-auto" onClick={startCamera} disabled={!eventId || !canScanSelectedEvent}>
                   <Camera className="mr-2 h-4 w-4" />
                   Start Camera
                 </Button>
@@ -548,7 +548,7 @@ export default function PublicScannerPage() {
             </div>
 
             <form
-              className="grid min-w-0 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+              className="grid min-w-0 gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
               onSubmit={(event) => {
                 event.preventDefault()
                 submitScan(manualPayload)
@@ -559,11 +559,11 @@ export default function PublicScannerPage() {
                 <input
                   value={manualPayload}
                   onChange={(event) => setManualPayload(event.target.value)}
-                  className="h-11 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#0B7186]"
+                  className="h-11 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#176F91]"
                   placeholder="Enter badge number, QR payload, or badge link"
                 />
               </label>
-              <Button type="submit" className="h-11 w-full rounded-lg bg-[#0B7186] font-bold text-white hover:bg-[#054653] sm:w-auto" disabled={!manualPayload || loading === "scan" || !canScanSelectedEvent}>
+              <Button type="submit" className="h-11 w-full rounded-lg bg-[#176F91] font-bold text-white hover:bg-[#0B5E78] sm:w-auto" disabled={!manualPayload || loading === "scan" || !canScanSelectedEvent}>
                 {loading === "scan" ? <RefreshCcw className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
                 Submit
               </Button>
@@ -571,7 +571,7 @@ export default function PublicScannerPage() {
 
             {result && (
               <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 px-3 py-4 backdrop-blur-sm sm:items-center">
-                <div className={`w-full max-w-md rounded-2xl border bg-white p-5 shadow-2xl ${resultTone(result.status)}`}>
+                <div className={`w-full max-w-md rounded-lg border bg-white p-5 shadow-sm ${resultTone(result.status)}`}>
                   <div className="flex items-start gap-3">
                     {result.status === "accepted" ? (
                       <CheckCircle2 className="mt-0.5 h-8 w-8 shrink-0" />
@@ -581,7 +581,7 @@ export default function PublicScannerPage() {
                       <XCircle className="mt-0.5 h-8 w-8 shrink-0" />
                     )}
                     <div className="min-w-0">
-                      <h3 className="text-xl font-extrabold text-slate-950">{resultTitle(result)}</h3>
+                      <h3 className="text-xl font-semibold text-slate-950">{resultTitle(result)}</h3>
                       <p className="mt-2 text-sm leading-6 text-slate-700">{resultMessage(result)}</p>
                       <AttendanceSummary result={result} />
                     </div>
@@ -589,7 +589,7 @@ export default function PublicScannerPage() {
                   <div className="mt-5 grid gap-2 sm:grid-cols-2">
                     <Button
                       type="button"
-                      className="h-11 rounded-lg bg-[#0B7186] font-bold text-white hover:bg-[#054653]"
+                      className="h-11 rounded-lg bg-[#176F91] font-bold text-white hover:bg-[#0B5E78]"
                       onClick={() => {
                         setResult(null)
                         lastPayloadRef.current = ""

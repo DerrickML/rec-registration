@@ -1,18 +1,19 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Button } from "@/components/ui/button"
+import { Menu, ArrowUpRight } from "lucide-react"
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetDescription,
+  SheetTrigger,
+} from "@/components/ui/sheet"
 import { useExcursion } from "@/components/excursions/excursion-provider"
 import { excursionPath } from "@/lib/excursions"
-import {
-  Sparkles,
-  ArrowRight,
-  ExternalLink,
-  Menu,
-  X,
-} from "lucide-react"
 
 const NAV_LINKS = [
   { href: "/", label: "Home", exact: true },
@@ -28,134 +29,82 @@ export default function Navbar({ conference }) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
   const excursion = useExcursion()
-  const links = excursion?.content.placements.includes("nav") ? [...NAV_LINKS, { href: excursionPath(excursion, "nav"), label: "Explore Uganda" }] : NAV_LINKS
-
-  if (!conference) return null
+  const links = excursion?.content.placements.includes("nav")
+    ? [
+        ...NAV_LINKS,
+        { href: excursionPath(excursion, "nav"), label: "Explore Uganda" },
+      ]
+    : NAV_LINKS
+  const navLinks = links.map((link) => {
+    const active = link.exact
+      ? pathname === link.href
+      : pathname.startsWith(link.href.split("?")[0])
+    return (
+      <Link
+        key={link.href}
+        href={link.href}
+        aria-current={active ? "page" : undefined}
+        onClick={() => setMobileOpen(false)}
+      >
+        {link.label}
+      </Link>
+    )
+  })
 
   return (
-    <>
-      <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex items-center justify-between">
-            {/* Logo + Brand */}
-            <Link href="/" className="flex min-w-0 flex-shrink-0 items-center space-x-3">
-              {conference.logoUrl ? (
-                <img
-                  src={conference.logoUrl}
-                  alt={conference.shortName || "Logo"}
-                  className="h-10 w-10 rounded-lg object-contain"
-                />
-              ) : (
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#0B7186] shadow-md shadow-[#0B7186]/20">
-                  <Sparkles className="w-5 h-5 text-white" />
-                </div>
-              )}
-              <div className="hidden min-w-0 sm:block">
-                <p className="truncate text-base font-bold leading-tight text-gray-950">
-                  {conference.shortName || "NREP"}
-                </p>
-                <p className="max-w-[260px] truncate text-xs font-medium text-gray-500 lg:max-w-[360px]">
-                  {conference.fullName || "Renewable Energy Platform"}
-                </p>
-              </div>
+    <header className="site-header">
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
+      <div className="site-container header-inner">
+        <Link href="/" className="site-brand" aria-label="REC & EXPO home">
+          <Image
+            src={conference?.logoUrl || "/NREP.png"}
+            alt="NREP"
+            width={48}
+            height={48}
+          />
+          <span>
+            <strong>REC & EXPO</strong>
+            <small>National Renewable Energy Platform</small>
+          </span>
+        </Link>
+        <nav className="desktop-nav" aria-label="Primary navigation">
+          {navLinks}
+        </nav>
+        <div className="header-actions">
+          {conference?.registrationOpen && (
+            <Link href="/register" className="site-button button-small">
+              Register <ArrowUpRight size={16} />
             </Link>
-
-            {/* Desktop Nav */}
-            <nav className="hidden xl:flex items-center space-x-1" aria-label="Primary navigation">
-              {links.map((link) => {
-                const isActive = link.exact ? pathname === link.href : pathname.startsWith(link.href.split("?")[0])
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-                      isActive
-                        ? "bg-[#0B7186]/[0.08] text-[#0B7186]"
-                        : "text-gray-600 hover:bg-[#0B7186]/[0.06] hover:text-[#0B7186]"
-                    }`}
-                  >
-                    {link.label}
-                  </Link>
-                )
-              })}
-              {conference.mainWebsiteUrl && (
-                <a
-                  href={conference.mainWebsiteUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Button
-                    variant="ghost"
-                    className="h-9 rounded-lg text-sm font-semibold text-gray-600 hover:bg-[#0B7186]/[0.06] hover:text-[#0B7186]"
-                  >
-                    NREP
-                    <ExternalLink className="ml-1.5 w-3.5 h-3.5" />
-                  </Button>
-                </a>
-              )}
-            </nav>
-
-            {/* Right side */}
-            <div className="flex items-center space-x-2">
-              {conference.registrationOpen && (
-                <Link href="/register">
-                  <Button className="h-9 rounded-lg bg-[#0B7186] px-4 text-sm font-semibold text-white shadow-sm shadow-[#0B7186]/20 transition-all hover:bg-[#054653] hover:shadow-md hover:shadow-[#0B7186]/25">
-                    Register
-                    <ArrowRight className="ml-1.5 w-3.5 h-3.5" />
-                  </Button>
-                </Link>
-              )}
-
-              {/* Mobile menu button */}
+          )}
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetTrigger asChild>
               <button
-                onClick={() => setMobileOpen(!mobileOpen)}
-                className="rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 xl:hidden"
-                aria-label="Toggle menu"
-                aria-expanded={mobileOpen}
+                type="button"
+                className="icon-button mobile-menu-toggle"
+                aria-label="Open navigation"
               >
-                {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                <Menu size={22} />
               </button>
-            </div>
-          </div>
+            </SheetTrigger>
+            <SheetContent className="mobile-nav-sheet">
+              <SheetTitle>REC & EXPO</SheetTitle>
+              <SheetDescription>Conference navigation</SheetDescription>
+              <nav className="mobile-nav" aria-label="Mobile navigation">
+                {navLinks}
+              </nav>
+              <Link
+                href="/scanner"
+                className="site-text-link"
+                onClick={() => setMobileOpen(false)}
+              >
+                Scanner access <ArrowUpRight size={16} />
+              </Link>
+            </SheetContent>
+          </Sheet>
         </div>
-
-        {/* Mobile menu dropdown */}
-        {mobileOpen && (
-          <div className="border-t border-gray-100 bg-white xl:hidden">
-            <nav className="space-y-1 px-4 py-3" aria-label="Mobile navigation">
-              {links.map((link) => {
-                const isActive = link.exact ? pathname === link.href : pathname.startsWith(link.href.split("?")[0])
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={`block px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                      isActive
-                        ? "bg-[#0B7186]/[0.08] text-[#0B7186]"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-[#0B7186]"
-                    }`}
-                  >
-                    {link.label}
-                  </Link>
-                )
-              })}
-              {conference.mainWebsiteUrl && (
-                <a
-                  href={conference.mainWebsiteUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:text-[#0B7186] hover:bg-gray-50 transition-colors"
-                >
-                  NREP Website
-                  <ExternalLink className="ml-1.5 w-3.5 h-3.5" />
-                </a>
-              )}
-            </nav>
-          </div>
-        )}
-      </header>
-    </>
+      </div>
+    </header>
   )
 }

@@ -56,12 +56,12 @@ export default function TimeSlotAccordion({
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex gap-3">
-            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-[#FFB803]/20 text-[#8A6200]">
+            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-[#EFA74F]/20 text-[#8F4E0A]">
               <BlockIcon className="h-5 w-5" />
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-bold uppercase tracking-wide text-[#8A6200]">
+                <span className="text-sm font-bold uppercase tracking-normal text-[#8F4E0A]">
                   {blockTypeLabel}
                 </span>
                 <span className="rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-gray-700">
@@ -86,7 +86,7 @@ export default function TimeSlotAccordion({
       <button
         onClick={onToggle}
         type="button"
-        className="sticky top-[68px] z-10 w-full rounded-lg border border-[#0B7186]/[0.15] bg-[#0B7186] px-4 py-3 text-white shadow-sm transition-all duration-200 hover:bg-[#054653] sm:px-5 sm:py-4"
+        className="schedule-slot-header sticky z-10 w-full rounded-md border border-[#176F91]/[0.15] bg-[#176F91] px-4 py-3 text-white transition-colors hover:bg-[#0B5E78] sm:px-5 sm:py-4"
         aria-expanded={isExpanded}
         aria-controls={panelId}
       >
@@ -96,7 +96,7 @@ export default function TimeSlotAccordion({
               <BlockIcon className="w-5 h-5" />
             </div>
             <div className="flex flex-col gap-0.5 text-left flex-1">
-              <span className="font-bold text-lg tracking-tight">
+              <span className="font-bold text-lg tracking-normal">
                 {displayedTimeRange}
               </span>
               {blockLabel && (

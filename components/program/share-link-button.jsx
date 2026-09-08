@@ -19,7 +19,7 @@ export default function ShareLinkButton({ conference }) {
       const shareMessage = `${conferenceTitle} Program\n\nDownload the full conference program PDF:\n${downloadUrl}\n\nGet all sessions, speakers, and schedule details in one PDF.`
 
       // Try to use native share API if available (mobile devices)
-      if (navigator.share && navigator.canShare({ text: shareMessage })) {
+      if (navigator.share && (!navigator.canShare || navigator.canShare({ text: shareMessage }))) {
         await navigator.share({
           title: `${conferenceTitle} Program`,
           text: shareMessage,
@@ -41,6 +41,7 @@ export default function ShareLinkButton({ conference }) {
         setTimeout(() => setCopied(false), 2000)
       }
     } catch (error) {
+      if (error.name === "AbortError") return
       console.error("Error sharing:", error)
       toast({
         title: "Error",
@@ -54,7 +55,7 @@ export default function ShareLinkButton({ conference }) {
     <Button
       onClick={handleShare}
       variant="outline"
-      className="h-11 rounded-lg border-[#0B7186]/25 px-5 font-semibold text-[#0B7186] shadow-sm transition-all duration-300 hover:bg-[#0B7186]/5 hover:text-[#054653]"
+      className="h-11 rounded-lg border-[#176F91]/25 px-5 font-semibold text-[#176F91] shadow-sm transition-all duration-300 hover:bg-[#176F91]/5 hover:text-[#0B5E78]"
     >
       {copied ? (
         <>

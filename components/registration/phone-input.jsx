@@ -60,7 +60,7 @@ export function CustomPhoneInput({
         
         .phone-input-custom .PhoneInputInput:focus {
           outline: none;
-          border-color: #0B7186;
+          border-color: #176F91;
           box-shadow: 0 0 0 3px rgba(11, 113, 134, 0.1);
         }
         
@@ -96,7 +96,7 @@ export function CustomPhoneInput({
         
         .phone-input-custom .PhoneInputCountrySelect:focus {
           outline: none;
-          border-color: #0B7186;
+          border-color: #176F91;
           box-shadow: 0 0 0 2px rgba(11, 113, 134, 0.1);
         }
         

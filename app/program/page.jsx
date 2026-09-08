@@ -1,14 +1,15 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Badge } from "@/components/ui/badge"
-import { Building, Calendar, MapPin } from "lucide-react"
 import { fetchPublicProgramData } from "@/lib/public-program-api"
-import { formatDateRange } from "@/lib/program-utils"
 import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
+import PageHero from "@/components/layout/page-hero"
 import ExcursionCta from "@/components/excursions/excursion-cta"
-import { PageErrorState, PageLoadingState } from "@/components/layout/public-page-state"
+import {
+  PageErrorState,
+  PageLoadingState,
+} from "@/components/layout/public-page-state"
 import ProgramStats from "@/components/program/program-stats"
 import ProgramSchedule from "@/components/program/program-schedule"
 import DownloadProgramButton from "@/components/program/download-program-button"
@@ -17,128 +18,93 @@ import PreviousReportCta from "@/components/program/previous-report-cta"
 import { apiService } from "@/lib/api-service"
 
 export default function ProgramPage() {
-  const [conference, setConference] = useState(null)
-  const [program, setProgram] = useState(null)
-  const [sessions, setSessions] = useState([])
-  const [timeBlocks, setTimeBlocks] = useState([])
-  const [previousReport, setPreviousReport] = useState({ report: null, conference: null })
+  const [data, setData] = useState(null)
+  const [previousReport, setPreviousReport] = useState({
+    report: null,
+    conference: null,
+  })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
-
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const programData = await fetchPublicProgramData()
-        setConference(programData.conference)
-        setProgram(programData.program)
-        setSessions(programData.sessions || [])
-        setTimeBlocks(programData.timeBlocks || [])
+    let current = true
+    fetchPublicProgramData()
+      .then((result) => {
+        if (!current) return
+        setData(result)
         apiService
-          .getFeaturedPreviousReport(programData.conference?.$id)
-          .then((result) => setPreviousReport(result || { report: null, conference: null }))
-          .catch(() => setPreviousReport({ report: null, conference: null }))
-      } catch (err) {
-        setError(err.message || "Failed to fetch conference program")
-      } finally {
-        setLoading(false)
-      }
+          .getFeaturedPreviousReport(result.conference?.$id)
+          .then((report) => {
+            if (current)
+              setPreviousReport(report || { report: null, conference: null })
+          })
+          .catch(() => {})
+      })
+      .catch((err) => {
+        if (current)
+          setError(err.message || "Failed to load conference program.")
+      })
+      .finally(() => {
+        if (current) setLoading(false)
+      })
+    return () => {
+      current = false
     }
-
-    fetchData()
   }, [])
-
-  if (loading) {
+  if (loading)
     return <PageLoadingState message="Loading conference program..." />
-  }
-
-  if (error || !conference || !program) {
+  if (error || !data?.conference || !data?.program)
     return (
       <PageErrorState
         title="Program not available"
         message={error || "No published program is available yet."}
       />
     )
-  }
-
-  const halls = program?.venueHalls || []
-
+  const { conference, program, sessions = [], timeBlocks = [] } = data
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="bg-white">
       <Navbar conference={conference} />
-
+      <PageHero
+        title="Conference program"
+        eyebrow="The program"
+        subtitle={
+          program.title ||
+          "Sessions, conversations and connections across the conference."
+        }
+        conference={conference}
+        photo="panel"
+      />
       <main>
-        <section className="border-b border-gray-200 bg-white">
-          <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
-            <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-              <div>
-                {program.status && (
-                  <Badge className="mb-4 rounded-md border border-[#0B7186]/[0.15] bg-[#0B7186]/[0.08] px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-[#0B7186]">
-                    {program.status}
-                  </Badge>
-                )}
-                <h1 className="max-w-4xl text-3xl font-extrabold tracking-tight text-gray-950 sm:text-4xl lg:text-5xl">
-                  {program.title || "Conference Program"}
-                </h1>
-                <p className="mt-4 max-w-3xl text-base leading-7 text-gray-600 sm:text-lg">
-                  Plan your sessions, compare halls, and download a copy of the published schedule.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row lg:justify-end">
-                <DownloadProgramButton
-                  conference={conference}
-                  program={program}
-                  sessions={sessions}
-                  timeBlocks={timeBlocks}
-                />
-                <ShareLinkButton conference={conference} />
-              </div>
-            </div>
-
-            <div className="mt-8 flex flex-wrap gap-3">
-              <div className="flex items-center space-x-2 rounded-lg border border-gray-200 bg-slate-50 px-4 py-2">
-                <Calendar className="h-4 w-4 text-[#0B7186]" />
-                <span className="text-sm font-semibold text-gray-700">
-                  {formatDateRange(conference.startDate, conference.endDate)}
-                </span>
-              </div>
-              {conference.location && (
-                <div className="flex items-center space-x-2 rounded-lg border border-gray-200 bg-slate-50 px-4 py-2">
-                  <MapPin className="h-4 w-4 text-[#0B7186]" />
-                  <span className="text-sm font-semibold text-gray-700">
-                    {conference.location}
-                  </span>
-                </div>
-              )}
-              {conference.venue && (
-                <div className="flex items-center space-x-2 rounded-lg border border-gray-200 bg-slate-50 px-4 py-2">
-                  <Building className="h-4 w-4 text-[#0B7186]" />
-                  <span className="text-sm font-semibold text-gray-700">
-                    {conference.venue}
-                  </span>
-                </div>
-              )}
+        <section className="site-container site-section">
+          <div className="section-heading">
+            <ProgramStats
+              daysCount={program.daysCount}
+              sessionCount={sessions.length}
+              hallsCount={(program.venueHalls || []).length}
+            />
+            <div className="button-row">
+              <DownloadProgramButton
+                conference={conference}
+                program={program}
+                sessions={sessions}
+                timeBlocks={timeBlocks}
+              />
+              <ShareLinkButton conference={conference} />
             </div>
           </div>
-        </section>
-
-        <ExcursionCta placement="program" compact />
-        <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-          <ProgramStats
-            daysCount={program.daysCount}
-            sessionCount={sessions.length}
-            hallsCount={halls.length}
+          <ProgramSchedule
+            conference={conference}
+            program={program}
+            sessions={sessions}
+            timeBlocks={timeBlocks}
           />
-          <ProgramSchedule conference={conference} program={program} sessions={sessions} timeBlocks={timeBlocks} />
         </section>
-
         <PreviousReportCta
           conference={conference}
           report={previousReport.report}
           reportConference={previousReport.conference}
         />
+        <ExcursionCta placement="program" compact />
       </main>
-
       <Footer conference={conference} />
     </div>
   )

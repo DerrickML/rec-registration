@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { notFound } from "next/navigation"
 import { CalendarDays, MapPin, Clock3, ArrowDown, ArrowLeft } from "lucide-react"
 import Navbar from "@/components/layout/navbar"
@@ -21,10 +22,10 @@ export default async function ExcursionPage({ params }) {
   const past = excursion.status === "archived" || Date.now() >= Date.parse(excursion.endsAt)
   return <div className={styles.page}>
     <Navbar conference={conference} />
-    <main>
+    <main id="main-content" tabIndex={-1}>
       <ExcursionPageView slug={excursion.slug} />
       <section className={styles.hero}>
-        <img src={content.heroImage} alt={content.heroAlt} fetchPriority="high" className={styles.heroPhoto} />
+        <Image src={content.heroImage} alt={content.heroAlt} fill sizes="100vw" priority className={styles.heroPhoto} />
         <div className={styles.heroContent}><p className={styles.eyebrow}>{excursionEdition(excursion)} / Delegate excursions</p><h1>{content.title}</h1><p className={styles.heroLead}>Beyond the conference. A little more Uganda.</p><a href="#experiences" className={styles.button}>Discover the experiences <ArrowDown size={18} /></a></div>
         <span className={styles.photoCredit}>Photography: {content.partnerName}</span>
       </section>

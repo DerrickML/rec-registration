@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Loader2 } from "lucide-react"
+import { PageLoadingState } from "@/components/layout/public-page-state"
 import { apiService } from "../../lib/api-service"
 import RegistrationForm from "../../components/registration/registration-form"
 import Navbar from "@/components/layout/navbar"
@@ -27,19 +27,15 @@ export default function RegisterPage() {
   }, [])
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[#0B7186]" />
-      </div>
-    )
+    return <PageLoadingState message="Loading registration..." />
   }
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
       <Navbar conference={conference} />
-      <div className="flex-1">
+      <main id="main-content" className="flex-1" tabIndex={-1}>
         <RegistrationForm />
-      </div>
+      </main>
       <Footer conference={conference} />
     </div>
   )

@@ -21,7 +21,6 @@ import {
   Building,
   MapPin,
   Calendar,
-  Sparkles,
   ArrowRight,
   ArrowLeft,
   Globe,
@@ -33,6 +32,7 @@ import {
 import { apiService } from "../../lib/api-service"
 import { countries } from "../../data/countries"
 import ConfirmationScreen from "./confirmation-screen"
+import { PageLoadingState } from "@/components/layout/public-page-state"
 import { CustomPhoneInput } from "./phone-input"
 
 const titles = ["Mr.", "Mrs.", "Ms.", "Dr.", "Eng.", "Rev.", "Prof."]
@@ -750,31 +750,15 @@ export default function RegistrationForm() {
 
   // Loading state while checking registration status
   if (checkingStatus) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
-        {/* Animated background elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#FFB803] rounded-full mix-blend-multiply filter blur-xl opacity-5 animate-pulse"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[#0B7186] rounded-full mix-blend-multiply filter blur-xl opacity-5 animate-pulse animation-delay-2000"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#054653] rounded-full mix-blend-multiply filter blur-xl opacity-3 animate-pulse animation-delay-4000"></div>
-        </div>
-
-        <div className="relative z-10 min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <Loader2 className="w-12 h-12 animate-spin text-[#0B7186] mx-auto mb-4" />
-            <p className="text-gray-600 text-lg">Checking registration status...</p>
-          </div>
-        </div>
-      </div>
-    )
+    return <PageLoadingState inline message="Checking registration availability..." />
   }
 
   // Registration closed screen
   if (registrationClosed) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="max-w-md w-full text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center mx-auto mb-6 shadow-lg">
+          <div className="w-16 h-16 rounded-lg bg-red-700 flex items-center justify-center mx-auto mb-6">
             <AlertCircle className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-3">Registration Closed</h2>
@@ -783,10 +767,10 @@ export default function RegistrationForm() {
           </p>
           
           <div className="space-y-4">
-            <Button asChild className="bg-[#0B7186] hover:bg-[#054653] text-white px-6 h-11 font-semibold rounded-xl shadow-md w-full">
+            <Button asChild className="bg-[#176F91] hover:bg-[#0B5E78] text-white px-6 h-11 font-semibold rounded-lg shadow-md w-full">
               <Link href="/">Back to Home</Link>
             </Button>
-            <Button asChild variant="outline" className="border-2 border-[#0B7186] text-[#0B7186] hover:bg-[#0B7186] hover:text-white px-6 h-11 font-semibold rounded-xl w-full">
+            <Button asChild variant="outline" className="border-2 border-[#176F91] text-[#176F91] hover:bg-[#176F91] hover:text-white px-6 h-11 font-semibold rounded-lg w-full">
               <Link href="/program">View Program</Link>
             </Button>
           </div>
@@ -798,13 +782,13 @@ export default function RegistrationForm() {
                 <>
                   Contact us at{" "}
                   {conference.contactEmail && (
-                    <a href={`mailto:${conference.contactEmail}`} className="text-[#0B7186] hover:underline font-medium">
+                    <a href={`mailto:${conference.contactEmail}`} className="text-[#176F91] hover:underline font-medium">
                       {conference.contactEmail}
                     </a>
                   )}
                   {conference.contactEmail && conference.contactPhone && " or "}
                   {conference.contactPhone && (
-                    <a href={`tel:${conference.contactPhone}`} className="text-[#0B7186] hover:underline font-medium">
+                    <a href={`tel:${conference.contactPhone}`} className="text-[#176F91] hover:underline font-medium">
                       {conference.contactPhone}
                     </a>
                   )}
@@ -870,32 +854,17 @@ export default function RegistrationForm() {
       : "Fill in your details to secure your spot."
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30 relative overflow-hidden">
-      {/* Background accents */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-32 -right-32 w-[400px] h-[400px] bg-gradient-to-br from-[#FFB803]/8 to-transparent rounded-full blur-3xl" />
-        <div className="absolute top-1/3 -left-40 w-[350px] h-[350px] bg-gradient-to-br from-[#0B7186]/6 to-transparent rounded-full blur-3xl" />
-        <div
-          className="absolute inset-0 opacity-[0.02]"
-          style={{
-            backgroundImage: "radial-gradient(circle, #0B7186 1px, transparent 1px)",
-            backgroundSize: "32px 32px",
-          }}
-        />
-      </div>
-
+    <div className="registration-surface min-h-screen">
       <div className="relative z-10 min-h-screen py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-10 animate-fade-in-up">
-            <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-[#0B7186] to-[#054653] rounded-2xl mb-5 shadow-lg shadow-[#0B7186]/20">
-              <Sparkles className="w-7 h-7 text-white" />
-            </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-gray-900 mb-3">
-              {conference?.title || "REC25 & EXPO"}
+          <div className="text-center mb-10">
+            <p className="site-kicker">Conference registration</p>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-normal text-gray-900 mb-3">
+              {conference?.title || "REC & EXPO"}
             </h1>
             <p className="text-gray-500 max-w-lg mx-auto">
-              Register for {conferenceLabel}. Returning participants will be guided into the correct current-conference flow after email verification.
+              Join us at {conferenceLabel}.
             </p>
           </div>
 
@@ -912,13 +881,13 @@ export default function RegistrationForm() {
                       <div className="flex flex-col items-center">
                         <div
                           className={`
-                          relative w-11 h-11 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all duration-500
+                          relative w-11 h-11 sm:w-14 sm:h-14 rounded-lg flex items-center justify-center transition-all duration-500
                           ${
                             isActive
-                              ? "bg-[#0B7186] shadow-lg shadow-[#0B7186]/25"
+                              ? "bg-[#176F91] shadow-lg shadow-[#176F91]/25"
                               : "bg-white border border-gray-200 shadow-sm"
                           }
-                          ${isCurrent ? "ring-4 ring-[#0B7186]/15 scale-105" : ""}
+                          ${isCurrent ? "ring-4 ring-[#176F91]/15 scale-105" : ""}
                         `}
                         >
                           {isActive && currentStep > step.number ? (
@@ -929,7 +898,7 @@ export default function RegistrationForm() {
                         </div>
                         <div className="mt-2 text-center">
                           <p
-                            className={`text-xs sm:text-sm font-semibold ${isActive ? "text-[#0B7186]" : "text-gray-400"}`}
+                            className={`text-xs sm:text-sm font-semibold ${isActive ? "text-[#176F91]" : "text-gray-400"}`}
                           >
                             {step.title}
                           </p>
@@ -940,7 +909,7 @@ export default function RegistrationForm() {
                         <div
                           className={`
                           w-6 sm:w-12 h-0.5 mx-2 sm:mx-3 rounded-full transition-all duration-500
-                          ${currentStep > step.number ? "bg-[#0B7186]" : "bg-gray-200"}
+                          ${currentStep > step.number ? "bg-[#176F91]" : "bg-gray-200"}
                         `}
                         />
                       )}
@@ -964,9 +933,9 @@ export default function RegistrationForm() {
           {/* Step 1: Registration Type Selection */}
           {currentStep === 1 && (
             <div className="animate-in slide-in-from-right duration-500">
-              <Card className="bg-white border border-gray-100 shadow-lg shadow-gray-200/50 rounded-2xl">
+              <Card className="bg-white border border-gray-100 shadow-lg shadow-gray-200/50 rounded-lg">
                 <CardHeader className="text-center pb-8">
-                  <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-r from-[#0B7186] to-[#FFB803] rounded-full mb-4 mx-auto">
+                  <div className="inline-flex items-center justify-center w-12 h-12 bg-[#176F91] rounded-full mb-4 mx-auto">
                     <User className="w-6 h-6 text-white" />
                   </div>
                   <CardTitle className="text-2xl sm:text-3xl font-bold text-gray-800">Registration Type</CardTitle>
@@ -989,7 +958,7 @@ export default function RegistrationForm() {
                                 relative p-6 rounded-lg border-2 cursor-pointer transition-all
                                 ${
                                   registrationType === type
-                                    ? "border-[#0B7186] bg-[#0B7186]/10"
+                                    ? "border-[#176F91] bg-[#176F91]/10"
                                     : isDisabled
                                       ? "border-gray-200 bg-gray-50 cursor-not-allowed opacity-50"
                                       : "border-gray-300 bg-white hover:bg-gray-50"
@@ -998,9 +967,9 @@ export default function RegistrationForm() {
                               onClick={() => !isDisabled && setRegistrationType(type)}
                             >
                               <div className="flex flex-col items-center text-center space-y-3">
-                                {type === "Attendee" && <User className="w-8 h-8 text-[#0B7186]" />}
-                                {type === "Exhibitor" && <Store className="w-8 h-8 text-[#0B7186]" />}
-                                {type === "Sponsor" && <Building className="w-8 h-8 text-[#0B7186]" />}
+                                {type === "Attendee" && <User className="w-8 h-8 text-[#176F91]" />}
+                                {type === "Exhibitor" && <Store className="w-8 h-8 text-[#176F91]" />}
+                                {type === "Sponsor" && <Building className="w-8 h-8 text-[#176F91]" />}
 
                                 <div>
                                   <h3 className="font-semibold text-gray-800">{type}</h3>
@@ -1043,7 +1012,7 @@ export default function RegistrationForm() {
 
                     <Button
                       type="submit"
-                      className="w-full h-12 bg-gradient-to-r from-[#0B7186] to-[#FFB803] hover:from-[#054653] hover:to-[#FFB803] text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                      className="w-full h-12 bg-[#176F91] hover:bg-[#0B5E78] text-white font-semibold shadow-lg hover:shadow-sm transition-all duration-300 "
                     >
                       Continue
                       <ArrowRight className="ml-2 h-5 w-5" />
@@ -1057,9 +1026,9 @@ export default function RegistrationForm() {
           {/* Step 2: Email Verification */}
           {currentStep === 2 && (
             <div className="animate-in slide-in-from-right duration-500">
-              <Card className="bg-white/95 backdrop-blur-sm border-gray-200 shadow-xl">
+              <Card className="bg-white border-gray-200 shadow-sm">
                 <CardHeader className="text-center pb-8">
-                  <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-r from-[#0B7186] to-[#FFB803] rounded-full mb-4 mx-auto">
+                  <div className="inline-flex items-center justify-center w-12 h-12 bg-[#176F91] rounded-full mb-4 mx-auto">
                     <Mail className="w-6 h-6 text-white" />
                   </div>
                   <CardTitle className="text-2xl sm:text-3xl font-bold text-gray-800">Email Verification</CardTitle>
@@ -1067,7 +1036,7 @@ export default function RegistrationForm() {
                     Enter your email address to begin. If you registered before, we will verify it and show the correct current-conference flow.
                   </CardDescription>
                   {registrationType && (
-                    <Badge variant="secondary" className="bg-[#0B7186]/10 text-[#0B7186] border-[#0B7186]/20 mt-4">
+                    <Badge variant="secondary" className="bg-[#176F91]/10 text-[#176F91] border-[#176F91]/20 mt-4">
                       {registrationType} Registration
                     </Badge>
                   )}
@@ -1086,7 +1055,7 @@ export default function RegistrationForm() {
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           placeholder="Enter your email address"
-                          className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186] focus:ring-[#0B7186]/20"
+                          className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#176F91] focus:ring-[#176F91]/20"
                           autoComplete="email"
                           required
                         />
@@ -1097,14 +1066,14 @@ export default function RegistrationForm() {
                         type="button"
                         variant="outline"
                         onClick={() => setCurrentStep(1)}
-                        className="flex-1 h-12 bg-gradient-to-r from-[#0B7186] to-[#FFB803] hover:from-[#054653] hover:to-[#FFB803] text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                        className="flex-1 h-12 bg-[#176F91] hover:bg-[#0B5E78] text-white font-semibold shadow-lg hover:shadow-sm transition-all duration-300 "
                       >
                         <ArrowLeft className="mr-2 h-5 w-5" />
                         Back
                       </Button>
                       <Button
                         type="submit"
-                        className="flex-1 h-12 bg-gradient-to-r from-[#0B7186] to-[#FFB803] hover:from-[#054653] hover:to-[#FFB803] text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                        className="flex-1 h-12 bg-[#176F91] hover:bg-[#0B5E78] text-white font-semibold shadow-lg hover:shadow-sm transition-all duration-300 "
                         disabled={loading}
                       >
                         {loading ? (
@@ -1129,9 +1098,9 @@ export default function RegistrationForm() {
           {/* Step 3: Email Verification */}
           {currentStep === 3 && (
             <div className="animate-in slide-in-from-right duration-500">
-              <Card className="bg-white/95 backdrop-blur-sm border-gray-200 shadow-xl">
+              <Card className="bg-white border-gray-200 shadow-sm">
                 <CardHeader className="text-center pb-8">
-                  <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-r from-[#0B7186] to-[#FFB803] rounded-full mb-4 mx-auto">
+                  <div className="inline-flex items-center justify-center w-12 h-12 bg-[#176F91] rounded-full mb-4 mx-auto">
                     <Mail className="w-6 h-6 text-white" />
                   </div>
                   <CardTitle className="text-2xl sm:text-3xl font-bold text-gray-800">Verify Email</CardTitle>
@@ -1158,7 +1127,7 @@ export default function RegistrationForm() {
                           value={otpCode}
                           onChange={(e) => handleOtpChange(e.target.value)}
                           placeholder="Enter 6-digit code"
-                          className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186] focus:ring-[#0B7186]/20 text-center tracking-[0.35em] font-semibold"
+                          className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#176F91] focus:ring-[#176F91]/20 text-center tracking-[0.35em] font-semibold"
                           inputMode="numeric"
                           autoComplete="one-time-code"
                           maxLength={6}
@@ -1170,7 +1139,7 @@ export default function RegistrationForm() {
                       <button
                         type="button"
                         onClick={handleChangeEmail}
-                        className="text-sm font-semibold text-[#0B7186] hover:text-[#054653] text-left"
+                        className="text-sm font-semibold text-[#176F91] hover:text-[#0B5E78] text-left"
                       >
                         Change email
                       </button>
@@ -1178,7 +1147,7 @@ export default function RegistrationForm() {
                         type="button"
                         onClick={handleResendOtp}
                         disabled={loading || otpResendCooldown > 0}
-                        className="text-sm font-semibold text-[#0B7186] hover:text-[#054653] disabled:text-gray-400 disabled:cursor-not-allowed text-left sm:text-right"
+                        className="text-sm font-semibold text-[#176F91] hover:text-[#0B5E78] disabled:text-gray-400 disabled:cursor-not-allowed text-left sm:text-right"
                       >
                         {otpResendCooldown > 0 ? `Resend code in ${otpResendCooldown}s` : "Resend code"}
                       </button>
@@ -1188,14 +1157,14 @@ export default function RegistrationForm() {
                         type="button"
                         variant="outline"
                         onClick={handleChangeEmail}
-                        className="flex-1 h-12 bg-gradient-to-r from-[#0B7186] to-[#FFB803] hover:from-[#054653] hover:to-[#FFB803] text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                        className="flex-1 h-12 bg-[#176F91] hover:bg-[#0B5E78] text-white font-semibold shadow-lg hover:shadow-sm transition-all duration-300 "
                       >
                         <ArrowLeft className="mr-2 h-5 w-5" />
                         Back
                       </Button>
                       <Button
                         type="submit"
-                        className="flex-1 h-12 bg-gradient-to-r from-[#0B7186] to-[#FFB803] hover:from-[#054653] hover:to-[#FFB803] text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                        className="flex-1 h-12 bg-[#176F91] hover:bg-[#0B5E78] text-white font-semibold shadow-lg hover:shadow-sm transition-all duration-300 "
                         disabled={loading}
                       >
                         {loading ? (
@@ -1220,9 +1189,9 @@ export default function RegistrationForm() {
           {/* Step 4: Registration Details */}
           {currentStep === 4 && (
             <div className="animate-in slide-in-from-right duration-500">
-              <Card className="bg-white/95 backdrop-blur-sm border-gray-200 shadow-xl">
+              <Card className="bg-white border-gray-200 shadow-sm">
                 <CardHeader className="text-center pb-8">
-                  <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-r from-[#0B7186] to-[#FFB803] rounded-full mb-4 mx-auto">
+                  <div className="inline-flex items-center justify-center w-12 h-12 bg-[#176F91] rounded-full mb-4 mx-auto">
                     {registrationType === "Exhibitor" ? (
                       <Store className="w-6 h-6 text-white" />
                     ) : (
@@ -1239,10 +1208,10 @@ export default function RegistrationForm() {
                 <CardContent>
                   <form onSubmit={handleRegistrationSubmit} className="space-y-8">
                     {isEditing && (
-                      <div className="rounded-xl border border-[#0B7186]/20 bg-[#0B7186]/10 p-4">
+                      <div className="rounded-lg border border-[#176F91]/20 bg-[#176F91]/10 p-4">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                           <div>
-                            <p className="font-semibold text-[#054653]">
+                            <p className="font-semibold text-[#0B5E78]">
                               Editing existing registration for {formData.firstName || formData.email}
                             </p>
                             <p className="text-sm text-gray-600">
@@ -1253,7 +1222,7 @@ export default function RegistrationForm() {
                             type="button"
                             variant="outline"
                             onClick={resetForm}
-                            className="border-[#0B7186] text-[#0B7186] hover:bg-white"
+                            className="border-[#176F91] text-[#176F91] hover:bg-white"
                           >
                             Cancel Edit
                           </Button>
@@ -1262,10 +1231,10 @@ export default function RegistrationForm() {
                     )}
 
                     {isReturningRegistration && (
-                      <div className="rounded-xl border border-[#FFB803]/30 bg-[#FFB803]/10 p-4">
+                      <div className="rounded-lg border border-[#EFA74F]/30 bg-[#EFA74F]/10 p-4">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                           <div>
-                            <p className="font-semibold text-[#054653]">
+                            <p className="font-semibold text-[#0B5E78]">
                               Returning registrant for {conferenceLabel}
                             </p>
                             <p className="text-sm text-gray-600">
@@ -1276,7 +1245,7 @@ export default function RegistrationForm() {
                             type="button"
                             variant="outline"
                             onClick={resetForm}
-                            className="border-[#0B7186] text-[#0B7186] hover:bg-white"
+                            className="border-[#176F91] text-[#176F91] hover:bg-white"
                           >
                             Start Over
                           </Button>
@@ -1285,10 +1254,10 @@ export default function RegistrationForm() {
                     )}
 
                     {!isEditing && (
-                      <div className="space-y-4 rounded-xl border border-gray-200 bg-gray-50 p-5">
+                      <div className="space-y-4 rounded-lg border border-gray-200 bg-gray-50 p-5">
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex items-center gap-2">
-                            <Ticket className="w-5 h-5 text-[#0B7186]" />
+                            <Ticket className="w-5 h-5 text-[#176F91]" />
                             <h3 className="text-lg font-semibold text-gray-800">
                               {couponRequired
                                 ? isReturningRegistration
@@ -1298,7 +1267,7 @@ export default function RegistrationForm() {
                             </h3>
                           </div>
                           {!couponRequired && !couponData && (
-                            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Optional</span>
+                            <span className="text-xs font-semibold uppercase tracking-normal text-gray-500">Optional</span>
                           )}
                         </div>
                         <p className="text-sm text-gray-600">
@@ -1331,7 +1300,7 @@ export default function RegistrationForm() {
                                 }
                               }}
                               placeholder="Enter coupon code"
-                              className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186] focus:ring-[#0B7186]/20"
+                              className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#176F91] focus:ring-[#176F91]/20"
                               required={couponRequired}
                               aria-invalid={Boolean(fieldErrors.coupon)}
                             />
@@ -1339,7 +1308,7 @@ export default function RegistrationForm() {
                           <Button
                             type="button"
                             onClick={handleCouponSubmit}
-                            className="h-12 bg-[#0B7186] hover:bg-[#054653] text-white font-semibold"
+                            className="h-12 bg-[#176F91] hover:bg-[#0B5E78] text-white font-semibold"
                             disabled={loading || (couponData && formData.coupon === couponCode)}
                           >
                             {loading ? (
@@ -1372,12 +1341,12 @@ export default function RegistrationForm() {
                         {couponData && (
                           <div className="flex flex-wrap items-center gap-3 rounded-lg bg-white border border-gray-200 p-4 text-sm">
                             <span className="w-full font-semibold text-gray-800">Coupon sponsorship</span>
-                            <Badge variant="secondary" className="bg-[#0B7186]/10 text-[#0B7186] border-[#0B7186]/20">
+                            <Badge variant="secondary" className="bg-[#176F91]/10 text-[#176F91] border-[#176F91]/20">
                               <Building className="w-3 h-3 mr-1" />
                               Sponsored by {couponData.sponsorOrganization}
                             </Badge>
                             {couponData.sponsorSector && (
-                              <Badge variant="secondary" className="bg-[#FFB803]/10 text-[#054653] border-[#FFB803]/20">
+                              <Badge variant="secondary" className="bg-[#EFA74F]/10 text-[#0B5E78] border-[#EFA74F]/20">
                                 <Globe className="w-3 h-3 mr-1" />
                                 {couponData.sponsorSector}
                               </Badge>
@@ -1389,14 +1358,14 @@ export default function RegistrationForm() {
                     )}
 
                     {isEditing && formData.sponsorOrganization && (
-                      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#0B7186]/20 bg-[#0B7186]/5 p-5 text-sm">
+                      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[#176F91]/20 bg-[#176F91]/5 p-5 text-sm">
                         <span className="w-full font-semibold text-gray-800">Coupon sponsorship</span>
-                        <Badge variant="secondary" className="bg-[#0B7186]/10 text-[#0B7186] border-[#0B7186]/20">
+                        <Badge variant="secondary" className="bg-[#176F91]/10 text-[#176F91] border-[#176F91]/20">
                           <Building className="w-3 h-3 mr-1" />
                           Sponsored by {formData.sponsorOrganization}
                         </Badge>
                         {formData.sponsorSector && (
-                          <Badge variant="secondary" className="bg-[#FFB803]/10 text-[#054653] border-[#FFB803]/20">
+                          <Badge variant="secondary" className="bg-[#EFA74F]/10 text-[#0B5E78] border-[#EFA74F]/20">
                             <Globe className="w-3 h-3 mr-1" />
                             {formData.sponsorSector}
                           </Badge>
@@ -1412,7 +1381,7 @@ export default function RegistrationForm() {
                       <div className="space-y-6">
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center space-x-2">
-                            <Users className="w-5 h-5 text-[#0B7186]" />
+                            <Users className="w-5 h-5 text-[#176F91]" />
                             {/*EXHIB <h3 className="text-xl font-semibold text-gray-800">Exhibitor Members</h3> */}
                             <h3 className="text-xl font-semibold text-gray-800">Exhibitor Representative Details</h3>
                           </div>
@@ -1421,7 +1390,7 @@ export default function RegistrationForm() {
                               type="button"
                               onClick={addExhibitorMember}
                               disabled={exhibitorMembers.length >= 4}
-                              className="bg-[#0B7186] hover:bg-[#054653] text-white px-3 py-1 text-sm"
+                              className="bg-[#176F91] hover:bg-[#0B5E78] text-white px-3 py-1 text-sm"
                             >
                               <Plus className="w-4 h-4 mr-1" />
                               Add Member
@@ -1463,7 +1432,7 @@ export default function RegistrationForm() {
                                     value={member.title}
                                     onValueChange={(value) => updateExhibitorMember(index, "title", value)}
                                   >
-                                    <SelectTrigger className="h-12 bg-white border-gray-300 text-gray-800 focus:border-[#0B7186]">
+                                    <SelectTrigger className="h-12 bg-white border-gray-300 text-gray-800 focus:border-[#176F91]">
                                       <SelectValue placeholder="Select title" />
                                     </SelectTrigger>
                                     <SelectContent className="bg-white border-gray-200">
@@ -1485,7 +1454,7 @@ export default function RegistrationForm() {
                                   <Input
                                     value={member.firstName}
                                     onChange={(e) => updateExhibitorMember(index, "firstName", e.target.value)}
-                                    className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                                    className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#176F91]"
                                     required
                                   />
                                 </div>
@@ -1497,7 +1466,7 @@ export default function RegistrationForm() {
                                   <Input
                                     value={member.lastName}
                                     onChange={(e) => updateExhibitorMember(index, "lastName", e.target.value)}
-                                    className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                                    className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#176F91]"
                                     required
                                   />
                                 </div>
@@ -1507,7 +1476,7 @@ export default function RegistrationForm() {
                                   <Input
                                     value={member.otherName}
                                     onChange={(e) => updateExhibitorMember(index, "otherName", e.target.value)}
-                                    className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                                    className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#176F91]"
                                   />
                                 </div>
                               </div>
@@ -1521,7 +1490,7 @@ export default function RegistrationForm() {
                                       type="email"
                                       value={member.email}
                                       onChange={(e) => updateExhibitorMember(index, "email", e.target.value)}
-                                      className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                                      className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#176F91]"
                                       required
                                     />
                                   </div>
@@ -1535,7 +1504,7 @@ export default function RegistrationForm() {
                                       type="email"
                                       value={member.otherEmail}
                                       onChange={(e) => updateExhibitorMember(index, "otherEmail", e.target.value)}
-                                      className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                                      className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#176F91]"
                                     />
                                   </div>
                                 </div>
@@ -1550,7 +1519,7 @@ export default function RegistrationForm() {
                                     required
                                     placeholder="Enter phone number"
                                     id={`member-${index}-phone`}
-                                    className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                                    className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#176F91]"
                                   />
                                 </div>
 
@@ -1561,7 +1530,7 @@ export default function RegistrationForm() {
                                     label="Alternate Phone"
                                     placeholder="Enter alternate phone number"
                                     id={`member-${index}-other-phone`}
-                                    className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                                    className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#176F91]"
                                   />
                                 </div>
                               </div>
@@ -1575,7 +1544,7 @@ export default function RegistrationForm() {
                     {registrationType !== "Exhibitor" && (
                       <div className="space-y-6">
                         <div className="flex items-center space-x-2 mb-4">
-                          <User className="w-5 h-5 text-[#0B7186]" />
+                          <User className="w-5 h-5 text-[#176F91]" />
                           <h3 className="text-xl font-semibold text-gray-800">Personal Information</h3>
                         </div>
 
@@ -1588,7 +1557,7 @@ export default function RegistrationForm() {
                               value={formData.title}
                               onValueChange={(value) => setFormData((prev) => ({ ...prev, title: value }))}
                             >
-                              <SelectTrigger className="h-12 bg-white border-gray-300 text-gray-800 focus:border-[#0B7186]">
+                              <SelectTrigger className="h-12 bg-white border-gray-300 text-gray-800 focus:border-[#176F91]">
                                 <SelectValue placeholder="Select title" />
                               </SelectTrigger>
                               <SelectContent className="bg-white border-gray-200">
@@ -1610,7 +1579,7 @@ export default function RegistrationForm() {
                               id="firstName"
                               value={formData.firstName}
                               onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))}
-                              className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                              className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#176F91]"
                               autoComplete="given-name"
                               required
                             />
@@ -1627,7 +1596,7 @@ export default function RegistrationForm() {
                               id="lastName"
                               value={formData.lastName}
                               onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))}
-                              className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                              className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#176F91]"
                               autoComplete="family-name"
                               required
                             />
@@ -1642,7 +1611,7 @@ export default function RegistrationForm() {
                               id="otherName"
                               value={formData.otherName}
                               onChange={(e) => setFormData((prev) => ({ ...prev, otherName: e.target.value }))}
-                              className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                              className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#176F91]"
                             />
                             <FieldError message={fieldErrors.phone} />
                           </div>
@@ -1676,7 +1645,7 @@ export default function RegistrationForm() {
                                 type="email"
                                 value={formData.otherEmail}
                                 onChange={(e) => setFormData((prev) => ({ ...prev, otherEmail: e.target.value }))}
-                                className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                                className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#176F91]"
                                 autoComplete="email"
                               />
                             </div>
@@ -1692,7 +1661,7 @@ export default function RegistrationForm() {
                               required
                               placeholder="Enter phone number"
                               id="phone"
-                              className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                              className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#176F91]"
                             />
                           </div>
 
@@ -1703,7 +1672,7 @@ export default function RegistrationForm() {
                               label="Other Phone"
                               placeholder="Enter alternate phone number"
                               id="otherPhone"
-                              className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                              className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#176F91]"
                             />
                           </div>
                         </div>
@@ -1713,7 +1682,7 @@ export default function RegistrationForm() {
                     {/* Organization Information */}
                     <div className="space-y-6">
                       <div className="flex items-center space-x-2 mb-4">
-                        <Building className="w-5 h-5 text-[#0B7186]" />
+                        <Building className="w-5 h-5 text-[#176F91]" />
                         <h3 className="text-xl font-semibold text-gray-800">Organization Information</h3>
                       </div>
 
@@ -1728,7 +1697,7 @@ export default function RegistrationForm() {
                             value={formData.organization}
                             onChange={(e) => setFormData((prev) => ({ ...prev, organization: e.target.value }))}
                             placeholder="Organization you represent"
-                            className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                            className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#176F91]"
                             autoComplete="organization"
                             required
                           />
@@ -1749,7 +1718,7 @@ export default function RegistrationForm() {
                         >
                           <SelectTrigger
                             id="organization-sector"
-                            className="h-12 bg-white border-gray-300 text-gray-800 focus:border-[#0B7186]"
+                            className="h-12 bg-white border-gray-300 text-gray-800 focus:border-[#176F91]"
                           >
                             <SelectValue placeholder="Select organization sector" />
                           </SelectTrigger>
@@ -1779,7 +1748,7 @@ export default function RegistrationForm() {
                             onChange={(e) => setFormData((prev) => ({ ...prev, exhibitionDetails: e.target.value }))}
                             placeholder="Describe your products/services, booth requirements, etc."
                             rows={4}
-                            className="bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186] resize-none"
+                            className="bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#176F91] resize-none"
                           />
                         </div>
                       )}
@@ -1788,7 +1757,7 @@ export default function RegistrationForm() {
                     {/* Location Information */}
                     <div className="space-y-6">
                       <div className="flex items-center space-x-2 mb-4">
-                        <MapPin className="w-5 h-5 text-[#0B7186]" />
+                        <MapPin className="w-5 h-5 text-[#176F91]" />
                         <h3 className="text-xl font-semibold text-gray-800">Location Information</h3>
                       </div>
 
@@ -1801,7 +1770,7 @@ export default function RegistrationForm() {
                             id="city"
                             value={formData.city}
                             onChange={(e) => setFormData((prev) => ({ ...prev, city: e.target.value }))}
-                            className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                            className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#176F91]"
                             autoComplete="address-level2"
                             required
                           />
@@ -1816,7 +1785,7 @@ export default function RegistrationForm() {
                             id="stateRegion"
                             value={formData.stateRegion}
                             onChange={(e) => setFormData((prev) => ({ ...prev, stateRegion: e.target.value }))}
-                            className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                            className="h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#176F91]"
                             autoComplete="address-level1"
                             required
                           />
@@ -1829,7 +1798,7 @@ export default function RegistrationForm() {
                           Country *
                         </Label>
                         <Select value={formData.country} onValueChange={handleCountryChange}>
-                          <SelectTrigger className="h-12 bg-white border-gray-300 text-gray-800 focus:border-[#0B7186]">
+                          <SelectTrigger className="h-12 bg-white border-gray-300 text-gray-800 focus:border-[#176F91]">
                             <SelectValue placeholder="Select country" />
                           </SelectTrigger>
                           <SelectContent className="bg-white border-gray-200 max-h-60">
@@ -1851,7 +1820,7 @@ export default function RegistrationForm() {
                     {/* Registration Details */}
                     <div className="space-y-6">
                       <div className="flex items-center space-x-2 mb-4">
-                        <Calendar className="w-5 h-5 text-[#0B7186]" />
+                        <Calendar className="w-5 h-5 text-[#176F91]" />
                         <h3 className="text-xl font-semibold text-gray-800">Registration Details</h3>
                       </div>
 
@@ -1869,7 +1838,7 @@ export default function RegistrationForm() {
                                   id={dayLabel}
                                   checked={formData.daysAttending.includes(dayLabel)}
                                   onCheckedChange={() => handleDayToggle(dayLabel)}
-                                  className="border-gray-300 data-[state=checked]:bg-[#0B7186] data-[state=checked]:border-[#0B7186] mt-1"
+                                  className="border-gray-300 data-[state=checked]:bg-[#176F91] data-[state=checked]:border-[#176F91] mt-1"
                                 />
                                 <div className="flex-1">
                                   <Label
@@ -1895,7 +1864,7 @@ export default function RegistrationForm() {
                             flex items-center justify-center space-x-2 p-4 rounded-lg border-2 cursor-pointer transition-all
                             ${
                               !formData.visaLetterRequired
-                                ? "border-[#0B7186] bg-[#0B7186]/10"
+                                ? "border-[#176F91] bg-[#176F91]/10"
                                 : "border-gray-300 bg-gray-50 hover:bg-gray-100"
                             }
                           `}
@@ -1919,7 +1888,7 @@ export default function RegistrationForm() {
                             flex items-center justify-center space-x-2 p-4 rounded-lg border-2 cursor-pointer transition-all
                             ${
                               formData.visaLetterRequired
-                                ? "border-[#0B7186] bg-[#0B7186]/10"
+                                ? "border-[#176F91] bg-[#176F91]/10"
                                 : "border-gray-300 bg-gray-50 hover:bg-gray-100"
                             }
                           `}
@@ -1954,7 +1923,7 @@ export default function RegistrationForm() {
                               value={formData.passportNumber}
                               onChange={(e) => setFormData((prev) => ({ ...prev, passportNumber: e.target.value }))}
                               placeholder="Enter passport number"
-                              className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186]"
+                              className="pl-10 h-12 bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#176F91]"
                               aria-invalid={Boolean(fieldErrors.passportNumber)}
                               required
                             />
@@ -1973,7 +1942,7 @@ export default function RegistrationForm() {
                           onChange={(e) => setFormData((prev) => ({ ...prev, additionalComments: e.target.value }))}
                           placeholder="Any special requirements or comments..."
                           rows={4}
-                          className="bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#0B7186] resize-none"
+                          className="bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-[#176F91] resize-none"
                         />
                       </div>
                     </div>
@@ -1984,7 +1953,7 @@ export default function RegistrationForm() {
                           type="button"
                           variant="outline"
                           onClick={resetForm}
-                          className="flex-1 h-12 bg-gradient-to-r from-[#0B7186] to-[#FFB803] hover:from-[#054653] hover:to-[#FFB803] text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                          className="flex-1 h-12 bg-[#176F91] hover:bg-[#0B5E78] text-white font-semibold shadow-lg hover:shadow-sm transition-all duration-300 "
                         >
                           <ArrowLeft className="mr-2 h-5 w-5" />
                           Start Over
@@ -1992,7 +1961,7 @@ export default function RegistrationForm() {
                       )}
                       <Button
                         type="submit"
-                        className="flex-1 h-12 bg-gradient-to-r from-[#0B7186] to-[#FFB803] hover:from-[#054653] hover:to-[#FFB803] text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                        className="flex-1 h-12 bg-[#176F91] hover:bg-[#0B5E78] text-white font-semibold shadow-lg hover:shadow-sm transition-all duration-300 "
                         disabled={loading}
                       >
                         {loading ? (

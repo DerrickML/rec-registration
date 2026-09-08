@@ -1,110 +1,187 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import Image from "next/image"
 import { ExternalLink, Images, PlayCircle, Search } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 
 const filters = [
-  { value: "all", label: "All" },
+  { value: "all", label: "All media" },
   { value: "image_album", label: "Albums" },
   { value: "video", label: "Videos" },
 ]
-
-function itemUrl(item) {
-  return item.mediaType === "video" ? item.videoUrl : item.externalUrl
-}
+const itemUrl = (item) =>
+  item.mediaType === "video" ? item.videoUrl : item.externalUrl
 
 export default function MediaDirectory({ items = [] }) {
   const [filter, setFilter] = useState("all")
   const [search, setSearch] = useState("")
-
-  const filteredItems = useMemo(() => {
-    const query = search.trim().toLowerCase()
-    return items
-      .filter((item) => filter === "all" || item.mediaType === filter)
-      .filter((item) => {
-        if (!query) return true
-        return [item.title, item.description].some((value) => String(value || "").toLowerCase().includes(query))
-      })
-  }, [filter, items, search])
+  const [preview, setPreview] = useState(null)
+  const filteredItems = useMemo(
+    () =>
+      items
+        .filter((item) => filter === "all" || item.mediaType === filter)
+        .filter((item) =>
+          [item.title, item.description].some((value) =>
+            String(value || "")
+              .toLowerCase()
+              .includes(search.trim().toLowerCase())
+          )
+        ),
+    [filter, items, search]
+  )
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-      <div className="mb-8 grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-[minmax(0,1fr)_auto]">
-        <label className="relative block">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+    <section className="site-container site-section">
+      <div className="directory-toolbar">
+        <label className="directory-search">
+          <span className="sr-only">Search media</span>
+          <Search />
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search media"
-            className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm font-semibold outline-none focus:border-[#0B7186]"
+            placeholder="Search albums and videos"
+            type="search"
           />
         </label>
-        <div className="flex flex-wrap gap-2">
+        <div className="segmented-control" aria-label="Media type">
           {filters.map((option) => (
             <button
               key={option.value}
               type="button"
+              aria-pressed={filter === option.value}
               onClick={() => setFilter(option.value)}
-              className={`h-11 rounded-xl px-4 text-sm font-extrabold transition ${
-                filter === option.value
-                  ? "bg-[#0B7186] text-white"
-                  : "border border-slate-200 bg-white text-slate-700 hover:border-[#0B7186] hover:text-[#0B7186]"
-              }`}
             >
               {option.label}
             </button>
           ))}
         </div>
       </div>
-
-      {filteredItems.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
-          <Images className="mx-auto mb-3 h-10 w-10 text-[#0B7186]" />
-          <h2 className="text-xl font-extrabold text-slate-950">No media available</h2>
-          <p className="mt-2 text-sm text-slate-600">Published albums and videos will appear here.</p>
+      <p className="sr-only" role="status">
+        {filteredItems.length} media items
+      </p>
+      {!filteredItems.length ? (
+        <div className="empty-state">
+          <Images size={30} />
+          <h2>
+            {items.length ? "No matching media" : "No media published yet"}
+          </h2>
+          <p>
+            {items.length
+              ? "Try a different search or media type."
+              : "Albums and videos will appear here once published."}
+          </p>
+          {items.length > 0 && (
+            <button
+              onClick={() => {
+                setFilter("all")
+                setSearch("")
+              }}
+              className="site-text-link"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="media-grid">
           {filteredItems.map((item) => (
-            <article key={item.$id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <div className="relative h-56 bg-slate-100">
+            <article key={item.$id} className="media-card">
+              <a
+                className="media-cover"
+                href={itemUrl(item)}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${item.mediaType === "video" ? "Watch" : "Open album"}: ${item.title} (opens in a new tab)`}
+              >
                 {item.coverImageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.coverImageUrl} alt={item.title} className="h-full w-full object-cover" />
+                  <Image
+                    src={item.coverImageUrl}
+                    alt={item.title}
+                    width={720}
+                    height={480}
+                  />
+                ) : item.mediaType === "video" ? (
+                  <PlayCircle size={40} />
                 ) : (
-                  <div className="flex h-full items-center justify-center bg-[#054653] text-white">
-                    {item.mediaType === "video" ? <PlayCircle className="h-12 w-12" /> : <Images className="h-12 w-12" />}
-                  </div>
+                  <Images size={40} />
                 )}
-                <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-extrabold text-[#054653] shadow-sm">
-                  {item.mediaType === "video" ? "Video" : "Image album"}
+                <span>
+                  {item.mediaType === "video" ? "Video" : "Photo album"}
                 </span>
-              </div>
-              <div className="grid gap-4 p-5">
-                <div>
-                  <h2 className="text-xl font-extrabold leading-snug text-slate-950">{item.title}</h2>
-                  {item.description && <p className="mt-2 text-sm leading-6 text-slate-600">{item.description}</p>}
-                </div>
-                {item.mediaType === "image_album" && item.sampleImages?.length > 1 && (
-                  <div className="grid grid-cols-4 gap-2">
-                    {item.sampleImages.slice(0, 4).map((image) => (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img key={image.fileId} src={image.url} alt={image.name || item.title} className="h-14 w-full rounded-lg object-cover" />
+              </a>
+              <h2>{item.title}</h2>
+              {item.description && <p>{item.description}</p>}
+              {item.mediaType === "image_album" &&
+                item.sampleImages?.length > 1 && (
+                  <div className="media-thumbnails">
+                    {item.sampleImages.slice(0, 4).map((photo, index) => (
+                      <button
+                        key={photo.fileId || index}
+                        onClick={() => setPreview({ photo, item })}
+                        aria-label={`Preview photo ${index + 1} from ${item.title}`}
+                      >
+                        <Image
+                          src={photo.url}
+                          alt=""
+                          width={180}
+                          height={135}
+                        />
+                      </button>
                     ))}
                   </div>
                 )}
-                <a href={itemUrl(item)} target="_blank" rel="noopener noreferrer">
-                  <Button className="h-11 w-full rounded-lg bg-[#0B7186] font-bold text-white hover:bg-[#054653]">
-                    {item.mediaType === "video" ? "Watch video" : "View full album"}
-                    <ExternalLink className="ml-2 h-4 w-4" />
-                  </Button>
-                </a>
-              </div>
+              <a
+                href={itemUrl(item)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="site-text-link"
+              >
+                {item.mediaType === "video" ? "Watch video" : "View full album"}
+                <ExternalLink size={16} />
+              </a>
             </article>
           ))}
         </div>
       )}
+      <Dialog
+        open={!!preview}
+        onOpenChange={(open) => {
+          if (!open) setPreview(null)
+        }}
+      >
+        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="pr-8">{preview?.item.title}</DialogTitle>
+            <DialogDescription>From the conference album</DialogDescription>
+          </DialogHeader>
+          {preview && (
+            <>
+              <Image
+                src={preview.photo.url}
+                alt={`Photograph from ${preview.item.title}`}
+                width={1080}
+                height={720}
+                className="max-h-[60svh] w-full object-contain"
+              />
+              <a
+                href={preview.item.externalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="site-text-link"
+              >
+                View full album <ExternalLink size={16} />
+              </a>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }

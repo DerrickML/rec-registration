@@ -1,196 +1,83 @@
 "use client"
 
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle, Calendar, Users, Sparkles, ArrowRight, Mail, MapPin, AlertCircle } from "lucide-react"
+import { CheckCircle, ArrowRight, AlertCircle } from "lucide-react"
+import { EventInformation } from "@/components/layout/page-hero"
 
-export default function ConfirmationScreen({ onRegisterAnother, conference, registration }) {
-  const formatDateRange = (startDate, endDate) => {
-    if (!startDate || !endDate) return "TBD"
-    const start = new Date(startDate)
-    const end = new Date(endDate)
-    const options = { month: "long", day: "numeric", year: "numeric" }
-    if (start.getMonth() === end.getMonth()) {
-      return `${start.toLocaleDateString("en-US", { month: "long" })} ${start.getDate()}-${end.getDate()}, ${start.getFullYear()}`
-    }
-    return `${start.toLocaleDateString("en-US", options)} - ${end.toLocaleDateString("en-US", options)}`
-  }
-
-  const eventDates = conference
-    ? formatDateRange(conference.startDate, conference.endDate)
-    : "Dates TBD"
-  const eventVenue = conference?.venue
-    ? `${conference.venue}, ${conference.location || ""}`
-    : "Venue TBD"
-  const warnings = Array.isArray(registration?.warnings) ? registration.warnings : []
-  const daysAttending = Array.isArray(registration?.daysAttending) ? registration.daysAttending : []
-
+export default function ConfirmationScreen({
+  onRegisterAnother,
+  conference,
+  registration,
+}) {
+  const warnings = Array.isArray(registration?.warnings)
+    ? registration.warnings
+    : []
+  const days = Array.isArray(registration?.daysAttending)
+    ? registration.daysAttending
+    : []
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#FFB803] rounded-full mix-blend-multiply filter blur-xl opacity-5 animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[#0B7186] rounded-full mix-blend-multiply filter blur-xl opacity-5 animate-pulse animation-delay-2000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#054653] rounded-full mix-blend-multiply filter blur-xl opacity-3 animate-pulse animation-delay-4000"></div>
-      </div>
-
-      <div className="relative z-10 min-h-screen py-8 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
-        <div className="max-w-2xl mx-auto w-full">
-          <div className="animate-in zoom-in duration-500">
-            <Card className="bg-white/95 backdrop-blur-sm border-gray-200 shadow-xl">
-              <CardHeader className="text-center pb-8">
-                <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-[#0B7186] to-[#FFB803] rounded-full mb-6 mx-auto shadow-lg animate-pulse">
-                  <CheckCircle className="w-10 h-10 text-white" />
-                </div>
-                <CardTitle className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-[#0B7186] to-[#054653] bg-clip-text text-transparent mb-4">
-                  Registration Successful!
-                </CardTitle>
-                <CardDescription className="text-xl text-gray-600">
-                  {conference?.successMessage || `Welcome to ${conference?.shortName || conference?.title || "the Conference"} - Your journey to the future of renewable energy begins now!`}
-                </CardDescription>
-              </CardHeader>
-
-              <CardContent className="space-y-8">
-                {warnings.length > 0 && (
-                  <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-left">
-                    <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
-                    <div>
-                      <p className="font-semibold text-amber-900">Registration saved, email pending</p>
-                      <p className="text-sm text-amber-800">{warnings[0]}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Success Animation */}
-                <div className="flex justify-center">
-                  <div className="relative">
-                    <div className="w-32 h-32 bg-gradient-to-r from-[#0B7186]/10 to-[#FFB803]/10 rounded-full flex items-center justify-center animate-pulse">
-                      <Sparkles className="w-16 h-16 text-[#0B7186]" />
-                    </div>
-                    <div className="absolute inset-0 w-32 h-32 border-4 border-[#0B7186]/20 rounded-full animate-ping"></div>
-                  </div>
-                </div>
-
-                {/* What's Next Section */}
-                <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
-                  <h3 className="font-bold text-xl text-gray-800 mb-6 text-center">What's Next?</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-start space-x-4 p-4 bg-white rounded-lg border border-gray-100">
-                      <div className="flex-shrink-0 w-10 h-10 bg-[#0B7186]/10 rounded-full flex items-center justify-center">
-                        <Mail className="w-5 h-5 text-[#0B7186]" />
-                      </div>
-                      <div>
-                        <p className="text-gray-800 font-medium">Confirmation Email</p>
-                        <p className="text-gray-600 text-sm">
-                          You'll receive a detailed confirmation email with your registration details and event
-                          information.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-4 p-4 bg-white rounded-lg border border-gray-100">
-                      <div className="flex-shrink-0 w-10 h-10 bg-[#FFB803]/10 rounded-full flex items-center justify-center">
-                        <Calendar className="w-5 h-5 text-[#0B7186]" />
-                      </div>
-                      <div>
-                        <p className="text-gray-800 font-medium">Event Updates</p>
-                        <p className="text-gray-600 text-sm">
-                          Stay tuned for speaker announcements, schedule updates, and exclusive pre-event content.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-4 p-4 bg-white rounded-lg border border-gray-100">
-                      <div className="flex-shrink-0 w-10 h-10 bg-[#054653]/10 rounded-full flex items-center justify-center">
-                        <Users className="w-5 h-5 text-[#FFB803]" />
-                      </div>
-                      <div>
-                        <p className="text-gray-800 font-medium">Networking Opportunities</p>
-                        <p className="text-gray-600 text-sm">
-                          Connect with industry leaders, innovators, and fellow attendees before the event.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Event Details */}
-                <div className="text-center space-y-4 p-6 bg-white rounded-xl border border-gray-200">
-                  <h4 className="font-bold text-xl text-gray-800 mb-4">Event Details</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-gray-600">
-                    <div className="flex items-center justify-center space-x-2">
-                      <Calendar className="w-5 h-5 text-[#0B7186]" />
-                      <span>
-                        <strong className="text-gray-800">Dates:</strong> {eventDates}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-center space-x-2">
-                      <MapPin className="w-5 h-5 text-[#0B7186]" />
-                      <span>
-                        <strong className="text-gray-800">Venue:</strong> {eventVenue}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {registration && (
-                  <div className="space-y-4 p-6 bg-white rounded-xl border border-gray-200">
-                    <h4 className="font-bold text-xl text-gray-800 text-center">Registration Summary</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-500">Email</p>
-                        <p className="font-semibold text-gray-800 break-all">{registration.email}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Registration Type</p>
-                        <p className="font-semibold text-gray-800">{registration.registrationType}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Days Attending</p>
-                        <p className="font-semibold text-gray-800">
-                          {daysAttending.length ? daysAttending.join(", ") : "Not specified"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Registrants</p>
-                        <p className="font-semibold text-gray-800">{registration.count || 1}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Action Button */}
-                <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                  <Button
-                    onClick={onRegisterAnother}
-                    className="flex-1 px-8 h-12 bg-gradient-to-r from-[#0B7186] to-[#FFB803] hover:from-[#054653] hover:to-[#FFB803] text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                  >
-                    Make Another Registration
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="flex-1 px-8 h-12 border-2 border-[#0B7186] text-[#0B7186] hover:bg-[#0B7186] hover:text-white font-semibold"
-                  >
-                    <Link href="/">Back to Home</Link>
-                  </Button>
-                </div>
-
-                {/* Footer Message */}
-                <div className="text-center pt-6 border-t border-white/10">
-                  <p className="text-gray-400 text-sm">
-                    Thank you for joining us in shaping the future of renewable energy.
-                    <br className="hidden sm:block" />
-                    See you at {conference?.shortName || conference?.title || "the Conference"}!
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+    <section className="site-container site-section">
+      <div className="mx-auto max-w-3xl">
+        <CheckCircle size={40} className="mb-5 text-green-700" />
+        <p className="site-kicker">Conference registration</p>
+        <h1 className="text-3xl font-semibold">Registration successful</h1>
+        <p className="mt-4 text-base leading-7 text-gray-600">
+          {conference?.successMessage ||
+            "Thank you for registering. Your conference details are below."}
+        </p>
+        {warnings.length > 0 && (
+          <div
+            role="status"
+            className="mt-6 flex gap-3 rounded-md border border-amber-200 bg-amber-50 p-4 text-amber-900"
+          >
+            <AlertCircle size={20} className="shrink-0" />
+            <div>
+              <strong>Registration saved, email pending</strong>
+              <p className="mt-1 text-sm">{warnings[0]}</p>
+            </div>
           </div>
+        )}
+        <div className="my-8 border-y border-gray-200 py-6">
+          <h2 className="mb-4 text-xl font-semibold">
+            {conference?.title || "REC & EXPO"}
+          </h2>
+          <EventInformation conference={conference} />
+        </div>
+        {registration && (
+          <dl className="grid gap-6 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-gray-600">Email</dt>
+              <dd className="mt-1 break-words font-semibold">
+                {registration.email}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-gray-600">Registration type</dt>
+              <dd className="mt-1 font-semibold">
+                {registration.registrationType}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-gray-600">Days attending</dt>
+              <dd className="mt-1 font-semibold">
+                {days.length ? days.join(", ") : "Not specified"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-gray-600">Registrants</dt>
+              <dd className="mt-1 font-semibold">{registration.count || 1}</dd>
+            </div>
+          </dl>
+        )}
+        <div className="button-row mt-10">
+          <button onClick={onRegisterAnother} className="site-button">
+            Register another participant <ArrowRight size={17} />
+          </button>
+          <Link href="/program" className="site-text-link">
+            Explore the program <ArrowRight size={17} />
+          </Link>
         </div>
       </div>
-    </div>
+    </section>
   )
 }

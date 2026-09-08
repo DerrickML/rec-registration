@@ -12,13 +12,13 @@ export default function SessionCard({ session, compact = false, continuation = f
   const spanLabel = session.sessionSpanType ? getSessionSpanLabel(session.sessionSpanType) : ""
 
   return (
-    <Card className="group border-gray-200 bg-white shadow-sm transition-all duration-300 hover:border-[#0B7186]/30 hover:shadow-lg">
+    <Card className="group border-gray-200 bg-white shadow-sm transition-all duration-300 hover:border-[#176F91]/30 hover:shadow-sm">
       <CardContent className={compact ? "p-4" : "p-6"}>
         {/* Session Header */}
         <div className={compact ? "mb-0 flex items-start justify-between" : "mb-4 flex items-start justify-between"}>
-          <div className="flex-1">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-3 flex-wrap">
-              <Badge className="rounded-md border border-[#0B7186]/20 bg-[#0B7186]/10 px-3 py-1 font-medium text-[#0B7186]">
+              <Badge className="rounded-md border border-[#176F91]/20 bg-[#176F91]/10 px-3 py-1 font-medium text-[#176F91]">
                 <MapPin className="w-3 h-3 mr-1 inline" />
                 {session.venueHall}
               </Badge>
@@ -34,13 +34,13 @@ export default function SessionCard({ session, compact = false, continuation = f
               {session.theme && (
                 <Badge
                   variant="outline"
-                  className="rounded-md border-[#FFB803]/40 bg-[#FFB803]/10 px-3 py-1 font-medium text-[#8A6200]"
+                  className="rounded-md border-[#EFA74F]/40 bg-[#EFA74F]/10 px-3 py-1 font-medium text-[#8F4E0A]"
                 >
                   {session.theme}
                 </Badge>
               )}
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2 leading-tight group-hover:text-[#0B7186] transition-colors">
+            <h3 className="break-words text-lg font-semibold text-gray-900 mb-2 leading-snug group-hover:text-[#176F91] transition-colors">
               {session.title}
             </h3>
             {continuation && (
@@ -56,7 +56,7 @@ export default function SessionCard({ session, compact = false, continuation = f
         {/* Organizer */}
         {session.organizer && (
           <div className="mb-4 flex items-center rounded-lg bg-slate-50 px-3 py-2 text-sm text-gray-600">
-            <Building className="w-4 h-4 mr-2 text-[#0B7186] flex-shrink-0" />
+            <Building className="w-4 h-4 mr-2 text-[#176F91] flex-shrink-0" />
             <span className="font-medium">{session.organizer}</span>
           </div>
         )}
@@ -71,7 +71,7 @@ export default function SessionCard({ session, compact = false, continuation = f
             {session.preamble.length > 200 && (
               <button
                 onClick={() => setExpanded(!expanded)}
-                className="text-[#0B7186] text-sm font-semibold hover:text-[#054653] mt-3 flex items-center gap-1 transition-colors"
+                className="text-[#176F91] text-sm font-semibold hover:text-[#0B5E78] mt-3 flex items-center gap-1 transition-colors"
               >
                 {expanded ? (
                   <>
@@ -93,11 +93,11 @@ export default function SessionCard({ session, compact = false, continuation = f
         {session.speakers && (
           <div className="mt-5 pt-5 border-t border-gray-200">
             <div className="flex items-start gap-3">
-              <div className="bg-[#FFB803]/10 p-2 rounded-lg flex-shrink-0">
-                <Users className="w-4 h-4 text-[#FFB803]" />
+              <div className="bg-[#EFA74F]/10 p-2 rounded-lg flex-shrink-0">
+                <Users className="w-4 h-4 text-[#8F4E0A]" />
               </div>
               <div
-                className="rich-text-content text-sm text-gray-700 flex-1"
+                className="rich-text-content min-w-0 break-words text-sm text-gray-700 flex-1"
                 dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(session.speakers) }}
               />
             </div>

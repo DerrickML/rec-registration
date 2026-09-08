@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { Toaster } from '@/components/ui/toaster'
+import ExcursionProvider from '@/components/excursions/excursion-provider'
 import {
   createEventJsonLd,
   createRouteMetadata,
@@ -46,7 +47,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        {children}
+        <ExcursionProvider>{children}</ExcursionProvider>
         <StructuredData conferencePromise={structuredDataPromise} />
         <Toaster />
       </body>

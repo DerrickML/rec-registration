@@ -18,6 +18,7 @@ import * as LucideIcons from "lucide-react"
 import { apiService } from "../lib/api-service"
 import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
+import ExcursionCta from "@/components/excursions/excursion-cta"
 import { PageErrorState, PageLoadingState } from "@/components/layout/public-page-state"
 import MediaShowcase from "@/components/media/media-showcase"
 import SponsorShowcase from "@/components/sponsors/sponsor-showcase"
@@ -405,6 +406,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <ExcursionCta placement="home" />
 
       <SponsorShowcase
         conference={conference}

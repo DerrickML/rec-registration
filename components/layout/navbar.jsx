@@ -4,6 +4,8 @@ import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { useExcursion } from "@/components/excursions/excursion-provider"
+import { excursionPath } from "@/lib/excursions"
 import {
   Sparkles,
   ArrowRight,
@@ -25,6 +27,8 @@ const NAV_LINKS = [
 export default function Navbar({ conference }) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const excursion = useExcursion()
+  const links = excursion?.content.placements.includes("nav") ? [...NAV_LINKS, { href: excursionPath(excursion, "nav"), label: "Explore Uganda" }] : NAV_LINKS
 
   if (!conference) return null
 
@@ -47,9 +51,9 @@ export default function Navbar({ conference }) {
                 </div>
               )}
               <div className="hidden min-w-0 sm:block">
-                <h1 className="truncate text-base font-bold leading-tight text-gray-950">
+                <p className="truncate text-base font-bold leading-tight text-gray-950">
                   {conference.shortName || "NREP"}
-                </h1>
+                </p>
                 <p className="max-w-[260px] truncate text-xs font-medium text-gray-500 lg:max-w-[360px]">
                   {conference.fullName || "Renewable Energy Platform"}
                 </p>
@@ -58,8 +62,8 @@ export default function Navbar({ conference }) {
 
             {/* Desktop Nav */}
             <nav className="hidden xl:flex items-center space-x-1" aria-label="Primary navigation">
-              {NAV_LINKS.map((link) => {
-                const isActive = link.exact ? pathname === link.href : pathname.startsWith(link.href)
+              {links.map((link) => {
+                const isActive = link.exact ? pathname === link.href : pathname.startsWith(link.href.split("?")[0])
                 return (
                   <Link
                     key={link.href}
@@ -119,8 +123,8 @@ export default function Navbar({ conference }) {
         {mobileOpen && (
           <div className="border-t border-gray-100 bg-white xl:hidden">
             <nav className="space-y-1 px-4 py-3" aria-label="Mobile navigation">
-              {NAV_LINKS.map((link) => {
-                const isActive = link.exact ? pathname === link.href : pathname.startsWith(link.href)
+              {links.map((link) => {
+                const isActive = link.exact ? pathname === link.href : pathname.startsWith(link.href.split("?")[0])
                 return (
                   <Link
                     key={link.href}

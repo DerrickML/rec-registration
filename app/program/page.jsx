@@ -7,6 +7,7 @@ import { fetchPublicProgramData } from "@/lib/public-program-api"
 import { formatDateRange } from "@/lib/program-utils"
 import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
+import ExcursionCta from "@/components/excursions/excursion-cta"
 import { PageErrorState, PageLoadingState } from "@/components/layout/public-page-state"
 import ProgramStats from "@/components/program/program-stats"
 import ProgramSchedule from "@/components/program/program-schedule"
@@ -121,6 +122,7 @@ export default function ProgramPage() {
           </div>
         </section>
 
+        <ExcursionCta placement="program" compact />
         <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
           <ProgramStats
             daysCount={program.daysCount}

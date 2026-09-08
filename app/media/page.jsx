@@ -5,6 +5,7 @@ import Link from "next/link"
 import { ArrowRight, FileText } from "lucide-react"
 import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
+import ExcursionCta from "@/components/excursions/excursion-cta"
 import PageHero from "@/components/layout/page-hero"
 import { PageErrorState, PageLoadingState } from "@/components/layout/public-page-state"
 import MediaDirectory from "@/components/media/media-directory"
@@ -136,6 +137,7 @@ export default function MediaPage() {
       ) : (
         <MediaDirectory items={items} />
       )}
+      <ExcursionCta placement="media" compact />
       <Footer conference={conference} />
     </div>
   )

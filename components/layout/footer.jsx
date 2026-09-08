@@ -1,6 +1,8 @@
 "use client"
 
 import Link from "next/link"
+import { useExcursion } from "@/components/excursions/excursion-provider"
+import { excursionPath, excursionEdition } from "@/lib/excursions"
 import {
   Sparkles,
   ExternalLink,
@@ -45,6 +47,7 @@ function InstagramIcon(props) {
 }
 
 export default function Footer({ conference }) {
+  const excursion = useExcursion()
   if (!conference) return null
 
   // Parse socials from socialsJson
@@ -153,6 +156,7 @@ export default function Footer({ conference }) {
               Quick Links
             </h4>
             <ul className="space-y-3">
+              {excursion?.content.placements.includes("footer") && <li><Link href={excursionPath(excursion, "footer")} className="text-gray-300 hover:text-white text-sm transition-colors">{excursionEdition(excursion)} / Explore Uganda</Link></li>}
               <li>
                 <Link
                   href="/about"

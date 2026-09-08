@@ -25,6 +25,7 @@ import {
 import { apiService } from "../../lib/api-service"
 import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
+import ExcursionCta from "@/components/excursions/excursion-cta"
 import PageHero from "@/components/layout/page-hero"
 import { PageErrorState, PageLoadingState } from "@/components/layout/public-page-state"
 
@@ -369,6 +370,7 @@ export default function AboutPage() {
         </div>
       </section>
 
+      <ExcursionCta placement="about" />
       <Footer conference={conference} />
     </div>
   )

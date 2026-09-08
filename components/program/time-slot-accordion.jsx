@@ -40,12 +40,17 @@ export default function TimeSlotAccordion({
   const blockLabel = block?.label || ""
   const blockTypeLabel = block ? getBlockTypeLabel(block.type) : ""
   const blockTimeRange = block ? formatBlockTimeRange(block) : ""
-  const startTimes = block ? null : formatTimeWithTimezone(timeSlotData.startTime)
+  const startTimes = block
+    ? null
+    : formatTimeWithTimezone(timeSlotData.startTime)
   const endTimes = block ? null : formatTimeWithTimezone(timeSlotData.toTime)
-  const displayedTimeRange = block ? blockTimeRange || "Time to be confirmed" : `${startTimes.kampala} - ${endTimes.kampala}`
+  const displayedTimeRange = block
+    ? blockTimeRange || "Time to be confirmed"
+    : `${startTimes.kampala} - ${endTimes.kampala}`
   const showBothTimezones = !block && startTimes.kampala !== startTimes.local
   const sessionEntries =
-    timeSlotData.sessionEntries || timeSlotData.sessions.map((session) => ({ session, isContinuation: false }))
+    timeSlotData.sessionEntries ||
+    timeSlotData.sessions.map((session) => ({ session, isContinuation: false }))
   const sessionsInSlot = sessionEntries.map((entry) => entry.session)
   const allowsSessions = block ? isSessionAllowedBlock(block) : true
   const panelId = `time-slot-${timeKey.replace(/[^a-zA-Z0-9_-]/g, "-")}`
@@ -53,7 +58,10 @@ export default function TimeSlotAccordion({
 
   if (block && !allowsSessions) {
     return (
-      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm sm:p-5">
+      <div
+        data-site-motion
+        className="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm sm:p-5"
+      >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex gap-3">
             <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-[#EFA74F]/20 text-[#8F4E0A]">
@@ -68,8 +76,14 @@ export default function TimeSlotAccordion({
                   {displayedTimeRange} EAT
                 </span>
               </div>
-              <h3 className="mt-2 text-lg font-bold text-gray-950">{blockLabel || blockTypeLabel}</h3>
-              {block.notes && <p className="mt-1 text-sm leading-6 text-gray-700">{block.notes}</p>}
+              <h3 className="mt-2 text-lg font-bold text-gray-950">
+                {blockLabel || blockTypeLabel}
+              </h3>
+              {block.notes && (
+                <p className="mt-1 text-sm leading-6 text-gray-700">
+                  {block.notes}
+                </p>
+              )}
             </div>
           </div>
           <div className="rounded-md border border-amber-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600">
@@ -81,7 +95,7 @@ export default function TimeSlotAccordion({
   }
 
   return (
-    <div className="space-y-4">
+    <div data-site-motion className="space-y-4">
       {/* Time Header - Clickable Accordion */}
       <button
         onClick={onToggle}
@@ -100,9 +114,13 @@ export default function TimeSlotAccordion({
                 {displayedTimeRange}
               </span>
               {blockLabel && (
-                <span className="text-sm font-semibold text-white/[0.92]">{blockLabel}</span>
+                <span className="text-sm font-semibold text-white/[0.92]">
+                  {blockLabel}
+                </span>
               )}
-              <span className="text-xs text-white/[0.85] font-medium">East Africa Time (EAT / UTC+3)</span>
+              <span className="text-xs text-white/[0.85] font-medium">
+                East Africa Time (EAT / UTC+3)
+              </span>
             </div>
             <div className="flex items-center gap-3">
               {showBothTimezones && (
@@ -111,17 +129,24 @@ export default function TimeSlotAccordion({
                     <div className="text-sm text-white font-semibold">
                       {startTimes.local} - {endTimes.local}
                     </div>
-                    <div className="text-xs text-white/80 font-medium">Your time ({startTimes.timezone})</div>
+                    <div className="text-xs text-white/80 font-medium">
+                      Your time ({startTimes.timezone})
+                    </div>
                   </div>
                 </div>
               )}
               <div className="rounded-lg bg-white/[0.15] px-3 py-1.5">
                 <span className="text-xs font-semibold">
-                  {sessionsInSlot.length} {sessionsInSlot.length === 1 ? "session" : "sessions"}
+                  {sessionsInSlot.length}{" "}
+                  {sessionsInSlot.length === 1 ? "session" : "sessions"}
                 </span>
               </div>
               <div className="rounded-lg bg-white/[0.15] p-2">
-                {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                {isExpanded ? (
+                  <ChevronUp className="w-5 h-5" />
+                ) : (
+                  <ChevronDown className="w-5 h-5" />
+                )}
               </div>
             </div>
           </div>
@@ -132,15 +157,17 @@ export default function TimeSlotAccordion({
               <div className="text-sm text-white font-semibold">
                 {startTimes.local} - {endTimes.local}
               </div>
-              <div className="text-xs text-white/80 font-medium">Your time ({startTimes.timezone})</div>
+              <div className="text-xs text-white/80 font-medium">
+                Your time ({startTimes.timezone})
+              </div>
             </div>
           </div>
         )}
       </button>
 
       {/* Sessions Grid - Collapsible */}
-      {isExpanded && (
-        sessionsInSlot.length > 0 ? (
+      {isExpanded &&
+        (sessionsInSlot.length > 0 ? (
           <div
             id={panelId}
             className={`grid gap-4 animate-in slide-in-from-top-2 duration-300 ${sessionsInSlot.length > 1 ? "md:grid-cols-2" : "md:grid-cols-1"}`}
@@ -159,13 +186,14 @@ export default function TimeSlotAccordion({
             id={panelId}
             className="rounded-lg border border-dashed border-gray-300 bg-slate-50 px-5 py-7 text-center"
           >
-            <p className="text-sm font-semibold text-gray-800">No published sessions in this slot yet</p>
+            <p className="text-sm font-semibold text-gray-800">
+              No published sessions in this slot yet
+            </p>
             <p className="mt-1 text-xs text-gray-500">
               This time remains available in the published program.
             </p>
           </div>
-        )
-      )}
+        ))}
     </div>
   )
 }

@@ -3,19 +3,41 @@
 import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Building, ChevronRight, ChevronUp, Layers, MapPin, Users } from "lucide-react"
+import {
+  Building,
+  ChevronRight,
+  ChevronUp,
+  Layers,
+  MapPin,
+  Users,
+} from "lucide-react"
 import { sanitizeRichHtml } from "@/lib/sanitize-html"
 import { getSessionSpanLabel } from "@/lib/schedule-utils"
 
-export default function SessionCard({ session, compact = false, continuation = false }) {
+export default function SessionCard({
+  session,
+  compact = false,
+  continuation = false,
+}) {
   const [expanded, setExpanded] = useState(false)
-  const spanLabel = session.sessionSpanType ? getSessionSpanLabel(session.sessionSpanType) : ""
+  const spanLabel = session.sessionSpanType
+    ? getSessionSpanLabel(session.sessionSpanType)
+    : ""
 
   return (
-    <Card className="group border-gray-200 bg-white shadow-sm transition-all duration-300 hover:border-[#176F91]/30 hover:shadow-sm">
+    <Card
+      data-site-motion
+      className="group border-gray-200 bg-white shadow-sm transition-all duration-300 hover:border-[#176F91]/30 hover:shadow-sm"
+    >
       <CardContent className={compact ? "p-4" : "p-6"}>
         {/* Session Header */}
-        <div className={compact ? "mb-0 flex items-start justify-between" : "mb-4 flex items-start justify-between"}>
+        <div
+          className={
+            compact
+              ? "mb-0 flex items-start justify-between"
+              : "mb-4 flex items-start justify-between"
+          }
+        >
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-3 flex-wrap">
               <Badge className="rounded-md border border-[#176F91]/20 bg-[#176F91]/10 px-3 py-1 font-medium text-[#176F91]">
@@ -53,56 +75,60 @@ export default function SessionCard({ session, compact = false, continuation = f
 
         {!compact && (
           <>
-        {/* Organizer */}
-        {session.organizer && (
-          <div className="mb-4 flex items-center rounded-lg bg-slate-50 px-3 py-2 text-sm text-gray-600">
-            <Building className="w-4 h-4 mr-2 text-[#176F91] flex-shrink-0" />
-            <span className="font-medium">{session.organizer}</span>
-          </div>
-        )}
-
-        {/* Preamble */}
-        {session.preamble && (
-          <div className="mb-4">
-            <div
-              className={`rich-text-content text-sm text-gray-700 leading-relaxed ${!expanded ? "line-clamp-3" : ""}`}
-              dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(session.preamble) }}
-            />
-            {session.preamble.length > 200 && (
-              <button
-                onClick={() => setExpanded(!expanded)}
-                className="text-[#176F91] text-sm font-semibold hover:text-[#0B5E78] mt-3 flex items-center gap-1 transition-colors"
-              >
-                {expanded ? (
-                  <>
-                    <span>Show less</span>
-                    <ChevronUp className="h-3.5 w-3.5" />
-                  </>
-                ) : (
-                  <>
-                    <span>Read more</span>
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </>
-                )}
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Speakers */}
-        {session.speakers && (
-          <div className="mt-5 pt-5 border-t border-gray-200">
-            <div className="flex items-start gap-3">
-              <div className="bg-[#EFA74F]/10 p-2 rounded-lg flex-shrink-0">
-                <Users className="w-4 h-4 text-[#8F4E0A]" />
+            {/* Organizer */}
+            {session.organizer && (
+              <div className="mb-4 flex items-center rounded-lg bg-slate-50 px-3 py-2 text-sm text-gray-600">
+                <Building className="w-4 h-4 mr-2 text-[#176F91] flex-shrink-0" />
+                <span className="font-medium">{session.organizer}</span>
               </div>
-              <div
-                className="rich-text-content min-w-0 break-words text-sm text-gray-700 flex-1"
-                dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(session.speakers) }}
-              />
-            </div>
-          </div>
-        )}
+            )}
+
+            {/* Preamble */}
+            {session.preamble && (
+              <div className="mb-4">
+                <div
+                  className={`rich-text-content text-sm text-gray-700 leading-relaxed ${!expanded ? "line-clamp-3" : ""}`}
+                  dangerouslySetInnerHTML={{
+                    __html: sanitizeRichHtml(session.preamble),
+                  }}
+                />
+                {session.preamble.length > 200 && (
+                  <button
+                    onClick={() => setExpanded(!expanded)}
+                    className="text-[#176F91] text-sm font-semibold hover:text-[#0B5E78] mt-3 flex items-center gap-1 transition-colors"
+                  >
+                    {expanded ? (
+                      <>
+                        <span>Show less</span>
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      </>
+                    ) : (
+                      <>
+                        <span>Read more</span>
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Speakers */}
+            {session.speakers && (
+              <div className="mt-5 pt-5 border-t border-gray-200">
+                <div className="flex items-start gap-3">
+                  <div className="bg-[#EFA74F]/10 p-2 rounded-lg flex-shrink-0">
+                    <Users className="w-4 h-4 text-[#8F4E0A]" />
+                  </div>
+                  <div
+                    className="rich-text-content min-w-0 break-words text-sm text-gray-700 flex-1"
+                    dangerouslySetInnerHTML={{
+                      __html: sanitizeRichHtml(session.speakers),
+                    }}
+                  />
+                </div>
+              </div>
+            )}
           </>
         )}
       </CardContent>

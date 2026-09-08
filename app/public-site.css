@@ -12,6 +12,7 @@
 }
 html {
   scroll-padding-top: 96px;
+  scroll-behavior: smooth;
 }
 body {
   font-family: "Segoe UI", Arial, sans-serif;
@@ -88,6 +89,7 @@ textarea {
   font-size: 14px;
   font-weight: 650;
   text-decoration: none;
+  transition: color 0.2s ease;
 }
 .site-text-link:hover {
   text-decoration: underline;
@@ -96,6 +98,7 @@ textarea {
 .site-text-link svg,
 .site-button svg {
   flex-shrink: 0;
+  transition: transform 0.2s ease;
 }
 .site-button {
   display: inline-flex;
@@ -112,7 +115,12 @@ textarea {
   line-height: 1.4;
   font-weight: 650;
   text-align: center;
-  transition: background 0.15s;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 .site-button:hover {
   background: var(--nrep-primary-dark);
@@ -162,6 +170,11 @@ textarea {
   border-radius: 5px;
   color: var(--nrep-primary-dark);
   background: white;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
 }
 .icon-button:hover {
   background: var(--site-wash);
@@ -176,6 +189,7 @@ textarea {
   z-index: 40;
   background: #fff;
   border-bottom: 1px solid var(--site-line);
+  box-shadow: 0 1px 0 rgb(24 45 57 / 3%);
 }
 .header-inner {
   display: flex;
@@ -195,6 +209,7 @@ textarea {
   object-fit: contain;
   width: 48px;
   height: 48px;
+  transition: transform 0.25s ease;
 }
 .site-brand strong {
   display: block;
@@ -220,17 +235,25 @@ textarea {
   font-weight: 600;
   position: relative;
   white-space: nowrap;
+  transition: color 0.2s ease;
 }
 .desktop-nav a:hover,
 .desktop-nav a[aria-current] {
   color: var(--nrep-primary-dark);
 }
-.desktop-nav a[aria-current]::after {
+.desktop-nav a::after {
   content: "";
   position: absolute;
   inset: auto 0 19px;
   height: 2px;
   background: var(--nrep-secondary);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.22s ease;
+}
+.desktop-nav a:hover::after,
+.desktop-nav a[aria-current]::after {
+  transform: scaleX(1);
 }
 .header-actions {
   display: flex;
@@ -252,6 +275,9 @@ textarea {
   padding: 15px 0;
   font-size: 17px;
   border-bottom: 1px solid var(--site-line);
+  transition:
+    color 0.2s ease,
+    padding-left 0.2s ease;
 }
 .mobile-nav a[aria-current] {
   color: var(--nrep-primary-dark);
@@ -430,6 +456,7 @@ textarea {
   width: 100%;
   height: auto;
   object-fit: cover;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .conference-photo figcaption {
   margin-top: 10px;
@@ -465,6 +492,9 @@ textarea {
   padding: 25px 0;
   border-bottom: 1px solid var(--site-line);
   align-items: center;
+  transition:
+    color 0.2s ease,
+    transform 0.22s ease;
 }
 .agenda-day:hover h3 {
   color: var(--nrep-primary);
@@ -491,6 +521,7 @@ textarea {
 }
 .agenda-day > svg {
   color: var(--nrep-primary);
+  transition: transform 0.22s ease;
 }
 .feature-list {
   display: grid;
@@ -501,6 +532,7 @@ textarea {
 .feature-list article {
   padding: 26px 0;
   border-bottom: 1px solid var(--site-line);
+  transition: transform 0.22s ease;
 }
 .feature-list h3 {
   font-size: 20px;
@@ -595,6 +627,7 @@ textarea {
   align-items: center;
   gap: 7px;
   color: #244c60;
+  transition: color 0.2s ease;
 }
 .footer-grid a:hover {
   text-decoration: underline;
@@ -794,6 +827,10 @@ textarea {
   font-size: 14px;
   font-weight: 650;
   border-bottom: 3px solid transparent;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease,
+    background-color 0.2s ease;
 }
 .segmented-control button[aria-pressed="true"] {
   color: var(--nrep-primary-dark);
@@ -827,6 +864,7 @@ textarea {
   min-width: 0;
   border-bottom: 1px solid var(--site-line);
   padding-bottom: 24px;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .media-cover {
   position: relative;
@@ -889,22 +927,30 @@ textarea {
   aspect-ratio: 4/3;
   height: auto;
   object-fit: cover;
+  transition: transform 0.25s ease;
 }
 .sponsor-carousel {
   display: flex;
   gap: 24px;
   overflow-x: auto;
+  overscroll-behavior-inline: contain;
   scroll-snap-type: x mandatory;
   scrollbar-color: #729bad #eaf2f6;
   padding-bottom: 20px;
 }
 .sponsor-slide {
   min-width: 220px;
-  flex: 0 0 calc((100% - 72px) / 4);
+  flex: 0 0 calc((100% - 48px) / 3);
   scroll-snap-align: start;
   border-bottom: 1px solid var(--site-line);
   padding: 12px 16px 24px;
   text-align: center;
+  transition:
+    border-color 0.25s ease,
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.sponsor-controls {
+  min-height: 42px;
 }
 .sponsor-slide .sponsor-logo {
   display: flex;
@@ -919,6 +965,7 @@ textarea {
   max-height: 90px;
   width: auto;
   height: auto;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .sponsor-slide h3 {
   font-size: 16px;
@@ -952,6 +999,15 @@ textarea {
 }
 .program-schedule {
   min-width: 0;
+}
+.report-card {
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.report-card img {
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .program-schedule .schedule-heading {
   border-top: 1px solid var(--site-line);
@@ -1002,12 +1058,96 @@ textarea {
   border-color: var(--site-line);
   background: white;
 }
+.motion-ready .site-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 0.58s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.58s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+  transition-delay: var(--site-reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+.motion-ready .site-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+  will-change: auto;
+}
+.motion-ready .site-page-enter {
+  animation: site-page-enter 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.motion-ready .hero-photo,
+.motion-ready .masthead-photo {
+  animation: site-image-arrive 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (hover: hover) and (pointer: fine) {
+  .site-brand:hover img {
+    transform: scale(1.04);
+  }
+  .site-button:hover,
+  .icon-button:hover {
+    transform: translateY(-2px);
+  }
+  .site-button:active,
+  .icon-button:active {
+    transform: translateY(0) scale(0.98);
+  }
+  .site-text-link:hover svg {
+    transform: translate(3px, -2px);
+  }
+  .mobile-nav a:hover {
+    padding-left: 5px;
+  }
+  .conference-photo:hover img {
+    transform: scale(1.018);
+  }
+  .motion-ready .agenda-day:hover,
+  .motion-ready .feature-list article:hover,
+  .motion-ready .media-card:hover,
+  .motion-ready .sponsor-slide:hover {
+    transform: translateY(-4px);
+  }
+  .agenda-day:hover > svg {
+    transform: translateX(4px);
+  }
+  .media-thumbnails button:hover img,
+  .sponsor-slide:hover .sponsor-logo img,
+  .report-card:hover img {
+    transform: scale(1.035);
+  }
+  .motion-ready .report-card:hover {
+    border-color: #bad3df;
+    box-shadow: 0 12px 30px rgb(24 45 57 / 10%);
+    transform: translateY(-5px);
+  }
+}
 @keyframes loading-travel {
   from {
     transform: translateX(-100%);
   }
   to {
     transform: translateX(350%);
+  }
+}
+@keyframes site-page-enter {
+  from {
+    opacity: 0.86;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes site-image-arrive {
+  from {
+    opacity: 0.78;
+    transform: scale(1.025);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 @media (min-width: 1280px) and (max-width: 1400px) {
@@ -1228,5 +1368,16 @@ textarea {
   }
   .loading-track span {
     width: 100%;
+  }
+  .motion-ready .site-reveal,
+  .motion-ready .site-reveal.is-visible {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .motion-ready .site-page-enter,
+  .motion-ready .hero-photo,
+  .motion-ready .masthead-photo {
+    animation: none !important;
   }
 }

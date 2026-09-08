@@ -54,6 +54,7 @@ export default function SponsorsDirectory({ categories = [], sponsors = [] }) {
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {list.map((sponsor) => (
                   <article
+                    data-site-motion
                     key={sponsor.$id || sponsor.name}
                     className="rounded-md border border-gray-200 bg-white p-6 text-center transition-colors hover:border-primary"
                   >

@@ -9,6 +9,7 @@ export default function DayTab({
 }) {
   return (
     <button
+      data-site-motion
       type="button"
       onClick={onClick}
       aria-pressed={isActive}

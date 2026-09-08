@@ -28,9 +28,12 @@ export default function ReportDirectory({ reports = [] }) {
       <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
           <FileText className="mx-auto h-11 w-11 text-slate-400" />
-          <h2 className="mt-4 text-xl font-semibold text-slate-950">No published reports for this edition</h2>
+          <h2 className="mt-4 text-xl font-semibold text-slate-950">
+            No published reports for this edition
+          </h2>
           <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">
-            Select another conference or return later when an official report has been published.
+            Select another conference or return later when an official report
+            has been published.
           </p>
         </div>
       </section>
@@ -41,11 +44,19 @@ export default function ReportDirectory({ reports = [] }) {
     <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {reports.map((report) => (
-          <article key={report.$id} className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+          <article
+            data-site-motion
+            key={report.$id}
+            className="report-card flex min-w-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
+          >
             <div className="relative aspect-[16/9] overflow-hidden bg-[#e7f4f7]">
               {report.coverImageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={report.coverImageUrl} alt="" className="h-full w-full object-cover" />
+                <img
+                  src={report.coverImageUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 <div className="flex h-full items-center justify-center bg-[#0B5E78]">
                   <FileText className="h-14 w-14 text-white/90" />
@@ -56,7 +67,9 @@ export default function ReportDirectory({ reports = [] }) {
               </span>
             </div>
             <div className="flex flex-1 flex-col p-5">
-              <h2 className="text-xl font-semibold leading-7 text-slate-950">{report.title}</h2>
+              <h2 className="text-xl font-semibold leading-7 text-slate-950">
+                {report.title}
+              </h2>
               {report.publicationDate && (
                 <div className="mt-3 flex items-center gap-2 text-xs font-bold text-slate-500">
                   <CalendarDays className="h-4 w-4 text-[#176F91]" />
@@ -64,7 +77,8 @@ export default function ReportDirectory({ reports = [] }) {
                 </div>
               )}
               <p className="mt-4 flex-1 text-sm leading-6 text-slate-600">
-                {report.summary || "Open the official publication for this REC edition."}
+                {report.summary ||
+                  "Open the official publication for this REC edition."}
               </p>
               <a
                 href={report.reportUrl}

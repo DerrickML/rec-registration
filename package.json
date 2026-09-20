@@ -55,7 +55,7 @@
     "jspdf-autotable": "^5.0.7",
     "jsqr": "^1.4.0",
     "lucide-react": "^0.454.0",
-    "next": "16.2.11",
+    "next": "16.3.5",
     "next-themes": "^0.4.4",
     "react": "^19",
     "react-day-picker": "^9.14.0",
@@ -74,18 +74,18 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "brace-expansion": "5.0.8",
+    "brace-expansion": "5.0.9",
     "eslint": "^9.39.4",
-    "eslint-config-next": "16.2.11",
+    "eslint-config-next": "16.3.5",
     "postcss": "^8.5.23",
     "tailwindcss": "^3.4.17",
     "typescript": "^5",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.11"
   },
   "overrides": {
     "brace-expansion": "$brace-expansion",
     "picomatch@<=2.3.1": "2.3.2",
     "postcss": "$postcss",
-    "sharp": "0.35.3"
+    "sharp": "0.35.4"
   }
 }

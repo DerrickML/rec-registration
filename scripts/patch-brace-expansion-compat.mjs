@@ -11,9 +11,9 @@ const packageMetadata = JSON.parse(fs.readFileSync(packagePath, "utf8"))
 const commonJsEntry = path.join(packageDirectory, "dist", "commonjs", "index.js")
 const marker = "NREP_BRACE_EXPANSION_COMMONJS_COMPAT"
 
-if (packageMetadata.version !== "5.0.8") {
+if (packageMetadata.version !== "5.0.9") {
   throw new Error(
-    `Expected brace-expansion 5.0.8, received ${packageMetadata.version}. Review the compatibility patch before upgrading.`
+    `Expected brace-expansion 5.0.9, received ${packageMetadata.version}. Review the compatibility patch before upgrading.`
   )
 }
 

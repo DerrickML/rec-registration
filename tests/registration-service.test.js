@@ -110,7 +110,7 @@ function attendeeInput(overrides = {}) {
   }
 }
 
-function service(db, mailer = {}) {
+function service(db, mailer = {}, options = {}) {
   return createRegistrationService({
     databases: db,
     query,
@@ -123,6 +123,7 @@ function service(db, mailer = {}) {
     now: () => new Date("2026-05-05T12:00:00Z"),
     otpGenerator: () => "123456",
     tokenGenerator: () => "edit-token",
+    ...options,
   })
 }
 
@@ -139,6 +140,29 @@ async function verifiedExistingRegistrationToken(svc, email) {
 }
 
 describe("registration service", () => {
+  it("synchronizes a saved registration with the badge registry", async () => {
+    const db = createDb({ conferences: [activeConference()] })
+    const onRegistrationSaved = vi.fn().mockResolvedValue(undefined)
+    const svc = service(db, {}, { onRegistrationSaved })
+    const editToken = await verifiedNewRegistrationToken(svc)
+    const result = await svc.submit(attendeeInput({ editToken, couponCode: "" }))
+    expect(result.status).toBe("registered")
+    expect(onRegistrationSaved).toHaveBeenCalledWith(expect.objectContaining({ $id: db.tables.registrants[0].$id, conferenceYears: [2025] }))
+  })
+
+  it("retains registration and reports a warning when badge synchronization is unavailable", async () => {
+    const db = createDb({ conferences: [activeConference()] })
+    const log = vi.spyOn(console, "error").mockImplementation(() => {})
+    try {
+      const svc = service(db, {}, { onRegistrationSaved: vi.fn().mockRejectedValue(new Error("HR unavailable")) })
+      const editToken = await verifiedNewRegistrationToken(svc)
+      const result = await svc.submit(attendeeInput({ editToken, couponCode: "" }))
+      expect(result.status).toBe("registered")
+      expect(db.tables.registrants).toHaveLength(1)
+      expect(result.warnings).toContain("Registration saved. Digital badge setup is pending synchronization by the conference team.")
+    } finally { log.mockRestore() }
+  })
+
   it("fails closed when the active conference is closed", async () => {
     const db = createDb({ conferences: [activeConference({ registrationOpen: false })] })
     await expect(service(db).start({ email: "a@example.com" })).rejects.toMatchObject({ status: 403 })

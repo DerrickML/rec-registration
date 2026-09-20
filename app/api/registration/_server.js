@@ -2,12 +2,14 @@ import { NextResponse } from "next/server"
 import { serverConfig, serverDatabases, serverQuery } from "@/lib/appwrite-server"
 import { createRegistrationMailer } from "@/lib/registration-mailer"
 import { createRegistrationService } from "@/lib/registration-service"
+import { synchronizeRegistrationBadge } from "@/lib/registration-badge-sync"
 
 export function registrationService() {
   return createRegistrationService({
     databases: serverDatabases,
     query: serverQuery,
     config: serverConfig,
+    onRegistrationSaved: synchronizeRegistrationBadge,
     mailer: createRegistrationMailer({
       emailApiUrl: serverConfig.emailApiUrl,
       otpEmailApiUrl: serverConfig.otpEmailApiUrl,

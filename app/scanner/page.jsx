@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import jsQR from "jsqr"
+import * as Dialog from "@radix-ui/react-dialog"
 import { BadgeCheck, Camera, CheckCircle2, CircleAlert, LogOut, Mail, QrCode, RefreshCcw, ShieldCheck, Smartphone, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -18,13 +19,12 @@ function getDeviceId() {
   return next
 }
 
-async function fetchScannerJson(url, { token, ...options } = {}) {
+async function fetchScannerJson(url, options = {}) {
   const response = await fetch(url, {
     cache: "no-store",
     ...options,
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },
   })
@@ -48,6 +48,7 @@ function resultTone(status) {
 function resultTitle(result) {
   if (result?.status === "accepted") return "Scan Accepted"
   if (result?.status === "duplicate") return "Already Scanned"
+  if (result?.status === "unconfirmed") return "Scan not confirmed"
   return "Scan Rejected"
 }
 
@@ -102,6 +103,9 @@ export default function PublicScannerPage() {
   const detectorRef = useRef(null)
   const scanningRef = useRef(false)
   const lastPayloadRef = useRef("")
+  const submittingRef = useRef(false)
+  const requestRef = useRef(null)
+  const cameraGeneration = useRef(0)
 
   const [email, setEmail] = useState("")
   const [conferences, setConferences] = useState([])
@@ -117,6 +121,7 @@ export default function PublicScannerPage() {
   const [cameraError, setCameraError] = useState("")
   const [loading, setLoading] = useState("")
   const [error, setError] = useState("")
+  const [devLogin, setDevLogin] = useState(false)
 
   const activeEvent = useMemo(
     () => events.find((event) => event.$id === eventId) || null,
@@ -128,35 +133,23 @@ export default function PublicScannerPage() {
     !["event_not_started", "event_ended"].includes(activeEvent.availabilityCode)
   )
 
-  const loadEvents = useCallback(async (token) => {
-    const data = await fetchScannerJson("/api/scanner/events", { token })
+  const loadEvents = useCallback(async () => {
+    const data = await fetchScannerJson("/api/scanner/events")
     const rows = data.documents || []
     setEvents(rows)
-    setEventId((current) => current || rows[0]?.$id || "")
+    setEventId((current) => rows.some((row) => row.$id === current) ? current : rows.find((row) => row.isCurrentlyOpen)?.$id || rows[0]?.$id || "")
   }, [])
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(sessionStorageKey)
-    if (!stored) return
-    try {
-      const parsed = JSON.parse(stored)
-      if (parsed?.token) {
-        setSession(parsed)
-        loadEvents(parsed.token).catch((err) => {
-          if ([401, 403].includes(err.status)) {
-            window.localStorage.removeItem(sessionStorageKey)
-            setSession(null)
-            setEvents([])
-            setEventId("")
-            setError(`${err.message || "Scanner access is no longer active."} Sign in again.`)
-            return
-          }
-          setError(err.message || "Could not restore the scanner session.")
-        })
-      }
-    } catch {
-      window.localStorage.removeItem(sessionStorageKey)
-    }
+    window.localStorage.removeItem(sessionStorageKey)
+    let active = true
+    fetchScannerJson("/api/scanner/auth/me").then(async (data) => {
+      if (!active) return
+      setSession(data)
+      await loadEvents()
+    }).catch((err) => { if (active && err.status !== 401) setError(err.message) })
+    fetchScannerJson("/api/scanner/auth/dev-login").then((data) => { if (active) setDevLogin(data.enabled === true) }).catch(() => {})
+    return () => { active = false }
   }, [loadEvents])
 
   useEffect(() => () => {
@@ -166,6 +159,7 @@ export default function PublicScannerPage() {
   }, [])
 
   const stopCamera = useCallback(() => {
+    cameraGeneration.current++
     scanningRef.current = false
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop())
@@ -224,14 +218,12 @@ export default function PublicScannerPage() {
         }),
       })
       const nextSession = {
-        token: data.token,
         expiresAt: data.expiresAt,
         operator: data.operator,
         conference: data.conference,
       }
-      window.localStorage.setItem(sessionStorageKey, JSON.stringify(nextSession))
       setSession(nextSession)
-      await loadEvents(data.token)
+      await loadEvents()
     } catch (err) {
       setError(err.message || "Could not verify access code.")
     } finally {
@@ -240,30 +232,33 @@ export default function PublicScannerPage() {
   }
 
   const submitScan = useCallback(async (payload) => {
-    if (!session?.token || !eventId || !payload) return
+    if (!session || !eventId || !payload || submittingRef.current) return
     if (!canScanSelectedEvent) {
       setResult({ status: "rejected", reason: "event_closed", error: activeEvent?.availabilityMessage || "This scan event is not open right now." })
       return
     }
+    submittingRef.current = true
+    stopCamera()
     setLoading("scan")
     setError("")
     setResult(null)
+    if (!requestRef.current || requestRef.current.payload !== payload || requestRef.current.eventId !== eventId) requestRef.current = { payload, eventId, nonce: crypto.randomUUID() }
     try {
       const data = await fetchScannerJson("/api/scanner/scans", {
         method: "POST",
-        token: session.token,
         body: JSON.stringify({
           eventId,
           qrPayload: payload,
-          clientNonce: window.crypto?.randomUUID?.() || `${Date.now()}`,
+          clientNonce: requestRef.current.nonce,
           deviceId: getDeviceId(),
           deviceLabel: navigator.userAgent || "Scanner device",
         }),
       })
       setResult(data)
+      requestRef.current = null
       setManualPayload("")
     } catch (err) {
-      if ([401, 403].includes(err.status)) {
+      if (err.status === 401) {
         window.localStorage.removeItem(sessionStorageKey)
         setSession(null)
         setEvents([])
@@ -273,12 +268,14 @@ export default function PublicScannerPage() {
         return
       }
       setResult({
-        status: "rejected",
+        status: !err.status || err.status >= 500 ? "unconfirmed" : "rejected",
+        event: activeEvent,
         reason: err.code || "scan_failed",
-        error: err.message || "Scan failed",
+        error: !err.status || err.status >= 500 ? "The server did not confirm this scan. Retry this request without recording it twice." : err.message || "Scan failed",
         details: err.details || {},
       })
     } finally {
+      submittingRef.current = false
       stopCamera()
       setLoading("")
     }
@@ -292,17 +289,21 @@ export default function PublicScannerPage() {
       return
     }
 
+    const generation = ++cameraGeneration.current
+    lastPayloadRef.current = ""
     try {
-      detectorRef.current = "BarcodeDetector" in window ? detectorRef.current || new window.BarcodeDetector({ formats: ["qr_code"] }) : null
+      try { detectorRef.current = "BarcodeDetector" in window ? new window.BarcodeDetector({ formats: ["qr_code"] }) : null } catch { detectorRef.current = null }
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: "environment" } },
         audio: false,
       })
+      if (generation !== cameraGeneration.current) { stream.getTracks().forEach((track) => track.stop()); return }
       streamRef.current = stream
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         await videoRef.current.play()
       }
+      if (generation !== cameraGeneration.current) { stream.getTracks().forEach((track) => track.stop()); return }
       setCameraActive(true)
       scanningRef.current = true
 
@@ -323,15 +324,16 @@ export default function PublicScannerPage() {
       }
 
       const tick = async () => {
-        if (!scanningRef.current || !videoRef.current) return
+        if (!scanningRef.current || !videoRef.current || generation !== cameraGeneration.current) return
         try {
           let payload = ""
           if (detectorRef.current) {
-            const codes = await detectorRef.current.detect(videoRef.current)
-            payload = codes?.[0]?.rawValue || ""
+            try { const codes = await detectorRef.current.detect(videoRef.current); payload = codes?.[0]?.rawValue || "" }
+            catch { detectorRef.current = null; payload = detectWithCanvas() }
           } else {
             payload = detectWithCanvas()
           }
+          if (generation !== cameraGeneration.current || !scanningRef.current) return
           if (payload && payload !== lastPayloadRef.current) {
             lastPayloadRef.current = payload
             stopCamera()
@@ -352,11 +354,32 @@ export default function PublicScannerPage() {
     }
   }
 
+  useEffect(() => { stopCamera() }, [eventId, stopCamera])
+
+  useEffect(() => {
+    if (!session) return
+    const refresh = () => loadEvents().catch((err) => {
+      if (err.status === 401) { setSession(null); stopCamera() }
+      setError(err.message)
+    })
+    const timer = window.setInterval(refresh, 30000)
+    const hidden = () => { if (document.hidden) stopCamera(); else refresh() }
+    document.addEventListener("visibilitychange", hidden)
+    return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", hidden) }
+  }, [loadEvents, session, stopCamera])
+
+  const loginForDevelopment = async () => {
+    setLoading("dev"); setError("")
+    try {
+      const data = await fetchScannerJson("/api/scanner/auth/dev-login", { method: "POST", body: JSON.stringify({ email, conferenceId, deviceId: getDeviceId() }) })
+      setSession(data); await loadEvents()
+    } catch (err) { setError(err.message) } finally { setLoading("") }
+  }
+
   const logout = async () => {
-    if (session?.token) {
+    if (session) {
       await fetchScannerJson("/api/scanner/auth/logout", {
         method: "POST",
-        token: session.token,
       }).catch(() => {})
     }
     stopCamera()
@@ -451,6 +474,7 @@ export default function PublicScannerPage() {
                       Send Code
                     </Button>
                   )}
+                  {devLogin && conferenceId && <Button type="button" variant="outline" onClick={loginForDevelopment} disabled={Boolean(loading)}>Development sign-in</Button>}
                 </div>
               </form>
             ) : (
@@ -489,14 +513,16 @@ export default function PublicScannerPage() {
                 Scan Event
                 <select
                   value={eventId}
+                  disabled={loading === "scan"}
                   onChange={(event) => {
+                    stopCamera()
                     setEventId(event.target.value)
                     setResult(null)
                   }}
                   className="h-11 w-full min-w-0 max-w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#176F91]"
                 >
                   {events.map((event) => (
-                    <option key={event.$id} value={event.$id}>{event.name}</option>
+                    <option key={event.$id} value={event.$id}>{event.name}{event.isCurrentlyOpen ? "" : " (closed)"}</option>
                   ))}
                 </select>
               </label>
@@ -532,7 +558,7 @@ export default function PublicScannerPage() {
 
             <div className="flex flex-col gap-2 sm:flex-row">
               {!cameraActive ? (
-                <Button className="h-11 w-full rounded-lg bg-[#176F91] font-bold text-white hover:bg-[#0B5E78] sm:w-auto" onClick={startCamera} disabled={!eventId || !canScanSelectedEvent}>
+                <Button className="h-11 w-full rounded-lg bg-[#176F91] font-bold text-white hover:bg-[#0B5E78] sm:w-auto" onClick={startCamera} disabled={Boolean(loading) || !eventId || !canScanSelectedEvent}>
                   <Camera className="mr-2 h-4 w-4" />
                   Start Camera
                 </Button>
@@ -541,7 +567,7 @@ export default function PublicScannerPage() {
                   Stop Camera
                 </Button>
               )}
-              <Button variant="outline" className="h-11 w-full rounded-lg font-bold sm:w-auto" onClick={() => loadEvents(session.token)}>
+              <Button variant="outline" className="h-11 w-full rounded-lg font-bold sm:w-auto" onClick={() => loadEvents().catch((e) => setError(e.message))}>
                 <RefreshCcw className="mr-2 h-4 w-4" />
                 Refresh Events
               </Button>
@@ -570,8 +596,9 @@ export default function PublicScannerPage() {
             </form>
 
             {result && (
-              <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 px-3 py-4 backdrop-blur-sm sm:items-center">
-                <div className={`w-full max-w-md rounded-lg border bg-white p-5 shadow-sm ${resultTone(result.status)}`}>
+              <Dialog.Root open onOpenChange={(open) => { if (!open) setResult(null) }}><Dialog.Portal>
+                <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/60" />
+                <Dialog.Content aria-describedby="scan-result-message" onPointerDownOutside={(e) => e.preventDefault()} className={`fixed left-1/2 top-1/2 z-[101] max-h-[90svh] w-[calc(100%-24px)] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border bg-white p-5 shadow-sm ${resultTone(result.status)}`}>
                   <div className="flex items-start gap-3">
                     {result.status === "accepted" ? (
                       <CheckCircle2 className="mt-0.5 h-8 w-8 shrink-0" />
@@ -581,11 +608,13 @@ export default function PublicScannerPage() {
                       <XCircle className="mt-0.5 h-8 w-8 shrink-0" />
                     )}
                     <div className="min-w-0">
-                      <h3 className="text-xl font-semibold text-slate-950">{resultTitle(result)}</h3>
-                      <p className="mt-2 text-sm leading-6 text-slate-700">{resultMessage(result)}</p>
+                      <Dialog.Title className="text-xl font-semibold text-slate-950">{resultTitle(result)}</Dialog.Title>
+                      {result.event?.name && <p className="mt-2 text-sm font-bold text-[#176F91]">{result.event.name}</p>}
+                      <Dialog.Description id="scan-result-message" className="mt-2 break-words text-sm leading-6 text-slate-700">{resultMessage(result)}</Dialog.Description>
                       <AttendanceSummary result={result} />
                     </div>
                   </div>
+                  {result.status === "unconfirmed" && <Button type="button" className="mt-4 w-full" onClick={() => { if (requestRef.current) submitScan(requestRef.current.payload) }}>Retry this scan</Button>}
                   <div className="mt-5 grid gap-2 sm:grid-cols-2">
                     <Button
                       type="button"
@@ -604,8 +633,8 @@ export default function PublicScannerPage() {
                       Close
                     </Button>
                   </div>
-                </div>
-              </div>
+                </Dialog.Content>
+              </Dialog.Portal></Dialog.Root>
             )}
           </section>
         )}

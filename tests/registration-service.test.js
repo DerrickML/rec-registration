@@ -140,6 +140,16 @@ async function verifiedExistingRegistrationToken(svc, email) {
 }
 
 describe("registration service", () => {
+  it("passes the registered conference context to confirmation emails", async () => {
+    const conference = activeConference({ year: 2025, title: "REC 2025 & EXPO", venue: "Test venue" })
+    const db = createDb({ conferences: [conference] })
+    const sendConfirmation = vi.fn().mockResolvedValue(true)
+    const svc = service(db, { sendConfirmation })
+    const editToken = await verifiedNewRegistrationToken(svc)
+    await svc.submit(attendeeInput({ editToken, couponCode: "" }))
+    expect(sendConfirmation).toHaveBeenCalledWith(expect.objectContaining({ email: "new@example.com" }), 2025, conference)
+  })
+
   it("synchronizes a saved registration with the badge registry", async () => {
     const db = createDb({ conferences: [activeConference()] })
     const onRegistrationSaved = vi.fn().mockResolvedValue(undefined)

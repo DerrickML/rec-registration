@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -45,6 +46,9 @@ function FieldError({ message }) {
 }
 
 export default function RegistrationForm() {
+  const router = useRouter()
+  const [exhibitionApplications, setExhibitionApplications] = useState(false)
+  useEffect(() => { let active = true; fetch("/api/exhibitors/configuration").then(r => r.ok ? r.json() : null).then(data => { if (active) setExhibitionApplications(data?.settings.enabled === true) }).catch(() => {}); return () => { active = false } }, [])
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -267,6 +271,7 @@ export default function RegistrationForm() {
   // Step 1: Registration Type Selection
   const handleRegistrationTypeSubmit = (e) => {
     e.preventDefault()
+    if (registrationType === "Exhibitor" && exhibitionApplications) { router.push("/exhibit/apply"); return }
     setFormData((prev) => ({ ...prev, registrationType }))
 
     if (registrationType === "Exhibitor") {
@@ -949,7 +954,7 @@ export default function RegistrationForm() {
                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4"> {/* for 2 columns without sponsor card */}
                         {registrationTypes.map((type) => {
                           const isExhibitor = type === "Exhibitor"
-                          const isDisabled = isExhibitor && exhibitorCapacity && !exhibitorCapacity.hasCapacity
+                          const isDisabled = isExhibitor && !exhibitionApplications && exhibitorCapacity && !exhibitorCapacity.hasCapacity
 
                           return (
                             <div
@@ -979,8 +984,8 @@ export default function RegistrationForm() {
                                   {type === "Exhibitor" && (
                                     <div className="text-sm text-gray-600 mt-1">
                                       {/* <p>Exhibition booth (2-4 members)</p> */}
-                                      <p>Exhibition booth</p>
-                                      {exhibitorCapacity && (
+                                      <p>{exhibitionApplications ? "Company application and approval" : "Exhibition booth"}</p>
+                                      {!exhibitionApplications && exhibitorCapacity && (
                                         <p className="text-xs mt-1">
                                           {exhibitorCapacity.hasCapacity
                                             ? `${exhibitorCapacity.remaining} spots remaining`

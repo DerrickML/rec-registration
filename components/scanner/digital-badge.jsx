@@ -46,7 +46,7 @@ export default function DigitalBadge({ token, initialBadge }) {
         <div className="min-w-0 sm:col-start-2 sm:row-start-1">
           <span className={`inline-flex rounded px-2 py-1 text-xs font-bold ${warning ? "bg-amber-50 text-amber-900" : "bg-[#e9f4ec] text-[#23623c]"}`}>{warning ? "Verification pending" : "Active"}</span>
           <h2 className="mt-3 break-words text-2xl font-bold leading-snug">{registration.name}</h2>
-          <p className="mt-1 text-sm font-semibold text-[#176F91]">{registration.registrationType}</p>
+          <p className="mt-1 text-sm font-semibold text-[#176F91]">{(registration.registrationTypes || [registration.registrationType]).filter(Boolean).join(" / ")}</p>
         </div>
         <div className="min-w-0 text-center sm:col-start-1 sm:row-span-2 sm:row-start-1">
           <Image unoptimized src={badge.qrDataUrl} alt="Conference entry QR code" width={360} height={360} className="mx-auto aspect-square h-auto w-full max-w-[260px] bg-white" />
@@ -55,6 +55,7 @@ export default function DigitalBadge({ token, initialBadge }) {
         </div>
         <section className="min-w-0 sm:col-start-2 sm:row-start-2">
           <p className="break-words text-sm leading-6">{registration.organization}</p>
+          {(registration.exhibitorCompanies || []).map(company => <p key={company.applicationId} className="mt-2 break-words text-sm leading-6"><strong>Exhibiting with:</strong> {company.name}{company.booth ? ` (${company.booth})` : ""}</p>)}
           {registration.sponsorOrganization && <p className="mt-2 text-sm leading-6 text-[#526774]">Sponsored by {registration.sponsorOrganization}</p>}
           <p className="mt-2 break-all text-sm text-[#526774]">{registration.email}</p>
           <h3 className="mt-6 flex items-center gap-2 text-sm font-bold"><CalendarDays size={16} />Registered days</h3>

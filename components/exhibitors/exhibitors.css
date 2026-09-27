@@ -1,0 +1,420 @@
+.exh-workspace {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px;
+  color: #20303f;
+  letter-spacing: 0;
+}
+.exh-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.exh-toolbar h1 {
+  font-size: 28px;
+  margin: 4px 0;
+}
+.exh-toolbar h2,
+.exh-form h2 {
+  font-size: 22px;
+  margin: 0 0 16px;
+}
+.exh-toolbar h3 {
+  font-size: 17px;
+  margin: 0;
+}
+.exh-muted {
+  color: #566777;
+  font-size: 14px;
+}
+.exh-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #d8e1e8;
+  margin: 20px 0;
+  overflow-x: auto;
+}
+.exh-tabs a {
+  padding: 12px 16px;
+  text-decoration: none;
+  color: #354b5e;
+  white-space: nowrap;
+  border-bottom: 3px solid transparent;
+}
+.exh-tabs a[aria-current="page"] {
+  border-color: #176f91;
+  color: #0b5e78;
+  font-weight: 700;
+}
+.exh-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #b9c9d3;
+  background: #fff;
+  color: #173b4d;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  min-height: 42px;
+  white-space: normal;
+}
+.exh-button:hover {
+  background: #eef5fa;
+}
+.exh-primary {
+  background: #176f91;
+  border-color: #176f91;
+  color: white;
+}
+.exh-primary:hover {
+  background: #0b5e78;
+  color: white;
+}
+.exh-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.exh-icon {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border: 1px solid #d8e1e8;
+  border-radius: 6px;
+  color: #973621;
+}
+.exh-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.exh-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  margin-bottom: 14px;
+}
+.exh-field label {
+  font-size: 14px;
+  font-weight: 600;
+}
+.exh-field input,
+.exh-field select,
+.exh-field textarea,
+.exh-select {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  border: 1px solid #bbc9d4;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #fff;
+  color: #20303f;
+  font: inherit;
+}
+.exh-field textarea {
+  resize: vertical;
+}
+.exh-field [aria-invalid="true"] {
+  border: 2px solid #b42318;
+}
+.exh-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 20px;
+}
+.exh-wide {
+  grid-column: 1/-1;
+}
+.exh-form {
+  max-width: 960px;
+  margin: 0 auto;
+}
+.exh-form fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+  margin: 0;
+}
+.exh-form h2 {
+  margin-top: 24px;
+}
+.exh-steps {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #d8e1e8;
+  padding-bottom: 12px;
+  flex-wrap: wrap;
+}
+.exh-steps button {
+  border: 0;
+  background: transparent;
+  color: #506172;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+}
+.exh-steps button span {
+  border: 1px solid #abc0cd;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.exh-steps [aria-current="step"] {
+  color: #0b5e78;
+  font-weight: 700;
+}
+.exh-steps [aria-current="step"] span {
+  color: white;
+  background: #176f91;
+  border-color: #176f91;
+}
+.exh-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+  border-top: 1px solid #d8e1e8;
+  padding: 16px 0;
+}
+.exh-representative {
+  padding: 22px 0;
+  border-bottom: 1px solid #d8e1e8;
+  margin-bottom: 20px;
+}
+.exh-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.6;
+  margin: 12px 0;
+  font-size: 14px;
+}
+.exh-check input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin-top: 3px;
+  accent-color: #176f91;
+}
+.exh-form .exh-days {
+  margin: 12px 0;
+}
+.exh-days legend {
+  font-size: 14px;
+  font-weight: 600;
+}
+.exh-consent {
+  white-space: pre-wrap;
+  border-left: 3px solid #efa74f;
+  background: #f4f7f9;
+  padding: 18px;
+  line-height: 1.7;
+}
+.exh-alert {
+  background: #eff6fb;
+  border: 1px solid #b9d4e2;
+  padding: 14px 18px;
+  border-radius: 6px;
+  margin: 16px 0;
+  overflow-wrap: anywhere;
+}
+.exh-error {
+  color: #9d261c;
+}
+.exh-alert.exh-error {
+  background: #fff1ef;
+  border-color: #efb6ad;
+}
+.exh-table-wrap {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  margin: 16px 0;
+}
+.exh-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 14px;
+}
+.exh-table th {
+  font-size: 12px;
+  color: #526779;
+  text-transform: uppercase;
+  text-align: left;
+  background: #f1f5f8;
+  padding: 12px;
+}
+.exh-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #dce5ec;
+  vertical-align: top;
+}
+.exh-table a {
+  color: #0b5e78;
+  font-weight: 600;
+}
+.exh-table td small {
+  display: block;
+  color: #596b7b;
+  margin-top: 4px;
+}
+.exh-status {
+  display: inline-flex;
+  padding: 4px 8px;
+  background: #edf2f6;
+  color: #294359;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.exh-status-approved,
+.exh-status-confirmed,
+.exh-status-completed {
+  background: #e6f4eb;
+  color: #236438;
+}
+.exh-status-rejected,
+.exh-status-invalid,
+.exh-status-cancelled {
+  background: #fcecea;
+  color: #9d261c;
+}
+.exh-status-waitlisted,
+.exh-status-changes_requested {
+  background: #fff3df;
+  color: #80500f;
+}
+.exh-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-block: 1px solid #d8e1e8;
+  margin: 20px 0;
+}
+.exh-stats > div {
+  padding: 20px 12px;
+}
+.exh-stats strong {
+  display: block;
+  font-size: 26px;
+  color: #0b5e78;
+}
+.exh-stats span {
+  font-size: 13px;
+  color: #526779;
+}
+.exh-detail {
+  max-width: 1000px;
+}
+.exh-detail section {
+  padding: 20px 0;
+  border-bottom: 1px solid #d8e1e8;
+}
+.exh-detail h2 {
+  font-size: 20px;
+}
+.exh-detail p {
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.exh-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.exh-summary dt {
+  font-size: 12px;
+  color: #526779;
+}
+.exh-summary dd {
+  margin: 3px 0;
+  overflow-wrap: anywhere;
+}
+.exh-modal .modal-title {
+  font-size: 20px;
+}
+.exh-modal .modal-body {
+  max-height: 70dvh;
+  overflow: auto;
+}
+.exh-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+}
+.exh-spin {
+  animation: exh-spin 1s linear infinite;
+}
+@keyframes exh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .exh-spin {
+    animation: none;
+  }
+}
+@media (max-width: 640px) {
+  .exh-workspace {
+    padding: 16px;
+  }
+  .exh-toolbar h1 {
+    font-size: 23px;
+  }
+  .exh-fields,
+  .exh-summary {
+    grid-template-columns: 1fr;
+  }
+  .exh-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .exh-steps button {
+    font-size: 12px;
+    padding: 6px;
+  }
+  .exh-toolbar > .exh-field {
+    width: 100%;
+  }
+  .exh-table {
+    min-width: 660px;
+  }
+  .exh-form-actions .exh-button {
+    flex: 1;
+  }
+  .exh-tabs a {
+    padding: 10px 6px;
+    font-size: 13px;
+    text-align: center;
+    flex: 1;
+  }
+  .exh-workspace {
+    overflow-wrap: anywhere;
+  }
+  .exh-steps {
+    gap: 0;
+  }
+}

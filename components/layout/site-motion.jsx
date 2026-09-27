@@ -47,6 +47,7 @@ export default function SiteMotion() {
       })
 
       elements.forEach((element, index) => {
+        if (element.closest('[data-site-motion="off"]')) return
         if (seen.has(element)) return
         seen.add(element)
         element.classList.add("site-reveal")
@@ -107,7 +108,7 @@ export default function SiteMotion() {
 
   useEffect(() => {
     const main = document.querySelector("main")
-    if (!main) return
+    if (!main || main.closest('[data-site-motion="off"]')) return
     main.classList.remove("site-page-enter")
     const frame = requestAnimationFrame(() =>
       main.classList.add("site-page-enter")

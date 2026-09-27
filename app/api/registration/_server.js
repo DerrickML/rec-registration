@@ -3,6 +3,7 @@ import { serverConfig, serverDatabases, serverQuery } from "@/lib/appwrite-serve
 import { createRegistrationMailer } from "@/lib/registration-mailer"
 import { createRegistrationService } from "@/lib/registration-service"
 import { synchronizeRegistrationBadge } from "@/lib/registration-badge-sync"
+import { fetchHrPortalJson } from "@/lib/hr-portal-api"
 
 export function registrationService() {
   return createRegistrationService({
@@ -10,6 +11,7 @@ export function registrationService() {
     query: serverQuery,
     config: serverConfig,
     onRegistrationSaved: synchronizeRegistrationBadge,
+    exhibitorApplicationEnabled: async conferenceId => (await fetchHrPortalJson(`/api/v1/rec/exhibitors/configuration?conferenceId=${encodeURIComponent(conferenceId)}`)).settings.enabled,
     mailer: createRegistrationMailer({
       emailApiUrl: serverConfig.emailApiUrl,
       otpEmailApiUrl: serverConfig.otpEmailApiUrl,

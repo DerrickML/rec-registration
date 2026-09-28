@@ -31,6 +31,7 @@ import {
   Store,
 } from "lucide-react"
 import { apiService } from "../../lib/api-service"
+import { conferenceDays as configuredConferenceDays } from "@/lib/conference-display"
 import { countries } from "../../data/countries"
 import ConfirmationScreen from "./confirmation-screen"
 import { PageLoadingState } from "@/components/layout/public-page-state"
@@ -142,6 +143,7 @@ export default function RegistrationForm() {
           return
         }
         setConference(activeConference)
+        setFormData(prev => ({ ...prev, daysAttending: configuredConferenceDays(activeConference.days).map(day => day.label) }))
         setCouponRequired(activeConference.couponRequired === true)
 
         // Check registration status
@@ -254,7 +256,7 @@ export default function RegistrationForm() {
       registrationType: "Attendee",
       visaLetterRequired: false,
       additionalComments: "",
-      daysAttending: [],
+      daysAttending: configuredConferenceDays(conference?.days).map(day => day.label),
       eventStart: conference?.startDate || "",
       eventEnd: conference?.endDate || "",
       passportNumber: "",
@@ -415,7 +417,7 @@ export default function RegistrationForm() {
     country: existingRecord.country || "",
     visaLetterRequired: false,
     additionalComments: "",
-    daysAttending: [],
+    daysAttending: configuredConferenceDays(conference?.days).map(day => day.label),
     passportNumber: "",
     visaLetterSent: false,
     exhibitionDetails: "",
@@ -825,22 +827,7 @@ export default function RegistrationForm() {
     { number: 4, title: "Details", icon: Building, description: "Current conference" },
   ]
 
-  const conferenceDays = conference?.days
-    ? (() => {
-        try {
-          const parsedDays = JSON.parse(conference.days)
-          return Array.isArray(parsedDays) ? parsedDays : []
-        } catch {
-          return typeof conference.days === "string"
-            ? conference.days.split(",").map((day) => ({ label: day.trim() }))
-            : []
-        }
-      })()
-    : [
-        { label: "20th October – Day 1", theme: "Renewable Energy Policy & Investment" },
-        { label: "21st October – Day 2", theme: "Technology & Innovation" },
-        { label: "22nd October – Day 3", theme: "Implementation & Sustainability" },
-      ]
+  const conferenceDays = configuredConferenceDays(conference?.days)
 
   const activeConferenceYear = conference?.startDate
     ? new Date(conference.startDate).getFullYear()

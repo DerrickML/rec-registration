@@ -1,0 +1,125 @@
+.visa-public {
+  width: min(100% - 32px, 680px);
+  margin: 0 auto;
+  padding: 140px 0 80px;
+  min-height: 75vh;
+  color: #193847;
+}
+.visa-public * {
+  box-sizing: border-box;
+  letter-spacing: 0;
+}
+.visa-public-heading {
+  border-bottom: 3px solid #efa74f;
+  padding-bottom: 24px;
+  margin-bottom: 28px;
+}
+.visa-public-heading svg {
+  color: #176f91;
+}
+.visa-public h1 {
+  font-size: 32px;
+  line-height: 1.25;
+  margin: 10px 0 0;
+}
+.visa-public h2 {
+  font-size: 22px;
+  line-height: 1.35;
+  margin-bottom: 16px;
+  overflow-wrap: anywhere;
+}
+.visa-public p {
+  line-height: 1.65;
+  margin: 14px 0;
+}
+.visa-public label {
+  display: grid;
+  gap: 8px;
+  margin: 24px 0 16px;
+  font-weight: 600;
+}
+.visa-public input:not([type="checkbox"]) {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #9fb9c8;
+  background: white;
+  color: #193847;
+  padding: 12px 14px;
+  font-size: 16px;
+  border-radius: 4px;
+}
+.visa-public button {
+  background: #176f91;
+  color: white;
+  border: 1px solid #176f91;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 12px 18px;
+  min-height: 46px;
+  cursor: pointer;
+  font-size: 16px;
+}
+.visa-public button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.visa-public :focus-visible {
+  outline: 3px solid #efa74f;
+  outline-offset: 3px;
+}
+.visa-public-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+.visa-public-actions button + button {
+  background: white;
+  color: #176f91;
+}
+.visa-public-error {
+  background: #fff1ef;
+  color: #8d241d;
+  padding: 16px;
+  border: 1px solid #e6b7b0;
+}
+.visa-public-note {
+  font-size: 14px;
+  color: #465f6b;
+}
+.visa-public fieldset {
+  border: 0;
+  border-bottom: 1px solid #cadbe3;
+  padding: 16px 0;
+  min-width: 0;
+}
+.visa-public legend {
+  font-size: 18px;
+  font-weight: 600;
+}
+.visa-public .visa-public-check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.visa-public-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: #176f91;
+}
+.visa-public-spin {
+  animation: visa-public-spin 1s linear infinite;
+}
+@keyframes visa-public-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .visa-public-spin {
+    animation: none;
+  }
+}

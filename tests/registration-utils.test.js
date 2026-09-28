@@ -13,6 +13,18 @@ const conference = {
 }
 
 describe("registration utilities", () => {
+  const validInput = { email: "a@example.com", registrationType: "Attendee", organization: "Org", sector: ["Private"], city: "Kampala", stateRegion: "Central", country: "UG" }
+  it("defaults new attendance to all days but preserves omitted edit selections", () => {
+    expect(validateRegistrationInput(validInput, conference, { requireCoupon: false }).daysAttending).toEqual(["Day 1", "Day 2"])
+    expect(validateRegistrationInput(validInput, conference, { requireCoupon: false, existingDays: ["Day 2"] }).daysAttending).toEqual(["Day 2"])
+    expect(() => validateRegistrationInput({ ...validInput, daysAttending: [] }, conference, { requireCoupon: false, existingDays: ["Day 2"] })).toThrow("at least one day")
+    expect(() => validateRegistrationInput(validInput, { ...conference, days: [] }, { requireCoupon: false })).toThrow("not been configured")
+  })
+  it("requires a passport for public visa requests and enforces the database length limit", () => {
+    expect(() => validateRegistrationInput({ ...validInput, visaLetterRequired: true }, conference, { requireCoupon: false })).toThrow("Passport number is required")
+    expect(() => validateRegistrationInput({ ...validInput, visaLetterRequired: true, passportNumber: "X".repeat(16) }, conference, { requireCoupon: false })).toThrow("15 characters")
+    expect(() => validateRegistrationInput({ ...validInput, visaLetterRequired: true, passportNumber: "0012345" }, conference, { requireCoupon: false })).not.toThrow()
+  })
   it("normalizes email addresses", () => {
     expect(normalizeEmail("  USER@Example.COM ")).toBe("user@example.com")
     expect(() => normalizeEmail("not-an-email")).toThrow("valid email")

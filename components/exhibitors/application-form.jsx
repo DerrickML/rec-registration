@@ -101,9 +101,11 @@ export default function ExhibitorApplicationForm({
   onCancel,
   imported = false
 }) {
-  const [data, setData] = useState(() =>
-    initialData ? { ...structuredClone(initialData), ...(!imported && !representativesOnly ? { consentAccepted: false } : {}) } : emptyExhibitorApplication()
-  )
+  const [data, setData] = useState(() => {
+    const value = initialData ? { ...structuredClone(initialData), ...(!imported && !representativesOnly ? { consentAccepted: false } : {}) } : emptyExhibitorApplication()
+    if (!initialData || imported) value.representatives = value.representatives.map(rep => ({ ...rep, days: rep.days?.length ? rep.days : days.map(day => day.label) }))
+    return value
+  })
   const [step, setStep] = useState(representativesOnly ? 2 : 0),
     [busy, setBusy] = useState(false),
     [errors, setErrors] = useState({}),
@@ -328,6 +330,7 @@ export default function ExhibitorApplicationForm({
                   />{" "}
                   Visa-support assistance requested
                 </label>
+                {rep.visaSupport && <Field name={`representatives.${index}.passportNumber`} label="Passport number" value={rep.passportNumber || ""} maxLength={15} required={!imported} errors={errors} onChange={value => updateRep(index, "passportNumber", value)} />}
               </section>
             ))}
             <button
@@ -339,7 +342,7 @@ export default function ExhibitorApplicationForm({
               onClick={() =>
                 update("representatives", [
                   ...data.representatives,
-                  emptyExhibitorApplication().representatives[0]
+                  { ...emptyExhibitorApplication().representatives[0], days: days.map(day => day.label) }
                 ])
               }
             >

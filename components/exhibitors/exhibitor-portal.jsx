@@ -113,7 +113,11 @@ export default function ExhibitorPortal() {
   }
   const save = async (data, submit) => {
     let result
-    if (mode === "representatives")
+    if (mode === "personal") {
+      const allowed = ["title", "fullName", "firstName", "lastName", "phone", "days", "visaSupport", "passportNumber"]
+      const details = Object.fromEntries(allowed.filter(key => Object.hasOwn(data.representatives[0], key)).map(key => [key, data.representatives[0][key]]))
+      result = await api(`applications/${application.$id}/my-details`, { details, revision: application.revision, requestId: crypto.randomUUID() }, "PATCH")
+    } else if (mode === "representatives")
       result = await api(
         `applications/${application.$id}/representatives`,
         {
@@ -223,11 +227,9 @@ export default function ExhibitorPortal() {
             <>
               {!session ? (
                 <div style={{ maxWidth: 560 }}>
-                  <h2>Access your company application</h2>
+                  <h2>Access your exhibition details</h2>
                   <p className="exh-muted">
-                    Use your company contact email to apply or review an
-                    existing application. Submission does not guarantee
-                    exhibition space.
+                    Company contacts can manage their applications. Representatives can sign in with their registered email to update their own details. Submission does not guarantee exhibition space.
                   </p>
                   {!configuration.applicationsOpen && (
                     <p className="exh-alert">
@@ -238,7 +240,7 @@ export default function ExhibitorPortal() {
                   <form onSubmit={login}>
                     <div className="exh-field">
                       <label htmlFor="exh-access-email">
-                        Company contact email
+                        Company contact or representative email
                       </label>
                       <input
                         id="exh-access-email"
@@ -396,11 +398,11 @@ export default function ExhibitorPortal() {
                       </div>
                     </>
                   )}
-                  {["new", "edit", "representatives"].includes(mode) && (
+                  {["new", "edit", "representatives", "personal"].includes(mode) && (
                     <ExhibitorApplicationForm
                       key={`${mode}-${application?.$id}`}
                       initialData={
-                        application?.data || {
+                        (mode === "personal" ? { ...application.data, representatives: application.data.representatives.filter(r => r.email === session.email) } : application?.data) || {
                           companyName: "",
                           companyEmail: session.email,
                           companyPhone: "",
@@ -410,11 +412,13 @@ export default function ExhibitorPortal() {
                       settings={configuration.settings}
                       days={configuration.conference.days}
                       onSave={save}
-                      allowDraft={mode !== "representatives"}
-                      representativesOnly={mode === "representatives"}
+                      allowDraft={!["representatives", "personal"].includes(mode) && application?.status !== "submitted"}
+                      representativesOnly={["representatives", "personal"].includes(mode)}
+                      personalOnly={mode === "personal"}
                       submitLabel={
-                        mode === "representatives"
+                        ["representatives", "personal"].includes(mode)
                           ? "Save representative details"
+                          : application?.status === "submitted" ? "Amend and resubmit"
                           : "Submit application"
                       }
                       onCancel={() => setMode(application ? "detail" : "list")}
@@ -431,10 +435,10 @@ export default function ExhibitorPortal() {
                             {human(application.status)}
                           </span>
                         </div>
-                        <p>{application.data.proposal}</p>
+                        {application.accessRole !== "representative" && <><p>{application.data.proposal}</p>
                         <p>
                           <strong>Category:</strong> {application.data.category}
-                        </p>
+                        </p></>}
                         {application.decision.message && (
                           <div className="exh-alert">
                             {application.decision.message}
@@ -459,17 +463,17 @@ export default function ExhibitorPortal() {
                           </p>
                         )}
                         <div className="exh-actions">
-                          {["draft", "changes_requested"].includes(
+                          {application.accessRole !== "representative" && ["draft", "changes_requested", "submitted"].includes(
                             application.status
                           ) && (
                             <button
                               className="exh-button exh-primary"
                               onClick={() => setMode("edit")}
                             >
-                              Edit application
+                              {application.status === "submitted" ? "Amend application" : "Edit application"}
                             </button>
                           )}
-                          {["approved", "confirmed"].includes(
+                          {application.accessRole !== "representative" && ["approved", "confirmed"].includes(
                             application.status
                           ) && (
                             <button
@@ -479,6 +483,8 @@ export default function ExhibitorPortal() {
                               Complete representative details
                             </button>
                           )}
+                          {application.data.representatives.some(r => r.email === session.email) && !["withdrawn", "cancelled", "rejected"].includes(application.status) && <button className="exh-button exh-primary" disabled={busy || application.data.representatives.filter(r => r.email === session.email).length !== 1} onClick={() => setMode("personal")}>Edit my details</button>}
+                          {application.accessRole !== "representative" && ["under_review", "waitlisted", "approved", "confirmed"].includes(application.status) && <button className="exh-button" disabled={busy} onClick={() => { setAction("request_changes"); setReason("") }}>Request application correction</button>}
                           {application.allowedActions
                             .filter((a) => a !== "submitted")
                             .map((a) => (
@@ -499,6 +505,8 @@ export default function ExhibitorPortal() {
                             ))}
                         </div>
                       </section>
+                      {application.accessRole === "representative" && application.data.representatives.length !== 1 && <p className="exh-alert">This email is shared by multiple representatives. Contact the REC team to verify separate email addresses before making personal changes.</p>}
+                      {application.accessRole !== "representative" && ["under_review", "waitlisted", "approved", "confirmed"].includes(application.status) && <p className="exh-alert">The exhibition proposal is locked at this stage. Request a correction for the REC team to review. Personal details can still be completed separately.</p>}
                       <section>
                         <h2>Representatives</h2>
                         {application.data.representatives.map((r) => (
@@ -526,7 +534,7 @@ export default function ExhibitorPortal() {
                           <h2>
                             {action === "confirmed"
                               ? "Confirm your participation"
-                              : "Withdraw this application"}
+                              : action === "request_changes" ? "Request an application correction" : "Withdraw this application"}
                           </h2>
                           <form
                             onSubmit={async (e) => {
@@ -535,7 +543,7 @@ export default function ExhibitorPortal() {
                               setError("")
                               try {
                                 const result = await api(
-                                  `applications/${application.$id}/transition`,
+                                  `applications/${application.$id}/${action === "request_changes" ? "request-changes" : "transition"}`,
                                   {
                                     status: action,
                                     reason,
@@ -546,7 +554,7 @@ export default function ExhibitorPortal() {
                                 )
                                 setApplication(result.application)
                                 setAction("")
-                                setMessage("Application updated.")
+                                setMessage(result.warnings?.join(" ") || "Application updated.")
                                 setRevision((x) => x + 1)
                               } catch (e) {
                                 setError(e.message)
@@ -576,7 +584,7 @@ export default function ExhibitorPortal() {
                             ) : (
                               <div className="exh-field">
                                 <label htmlFor="exh-withdraw">
-                                  Reason for withdrawal
+                                  {action === "request_changes" ? "What needs to be corrected?" : "Reason for withdrawal"}
                                 </label>
                                 <textarea
                                   id="exh-withdraw"

@@ -4,6 +4,8 @@ import {
   normalizeEmail,
   sanitizeRichHtml,
   validateRegistrationInput,
+  validateAttendeeInput,
+  validateExhibitorMembers,
 } from "../lib/registration-utils"
 
 const conference = {
@@ -13,6 +15,12 @@ const conference = {
 }
 
 describe("registration utilities", () => {
+  it("accepts attendee and legacy representative details without titles", () => {
+    const person = { firstName: "Alex", lastName: "Example", phone: "0700000000", email: "a@example.com" }
+    expect(() => validateAttendeeInput(person)).not.toThrow()
+    expect(() => validateExhibitorMembers([person])).not.toThrow()
+    expect(() => validateAttendeeInput({ ...person, firstName: "" })).toThrow()
+  })
   const validInput = { email: "a@example.com", registrationType: "Attendee", organization: "Org", sector: ["Private"], city: "Kampala", stateRegion: "Central", country: "UG" }
   it("defaults new attendance to all days but preserves omitted edit selections", () => {
     expect(validateRegistrationInput(validInput, conference, { requireCoupon: false }).daysAttending).toEqual(["Day 1", "Day 2"])

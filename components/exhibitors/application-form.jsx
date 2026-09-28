@@ -48,7 +48,8 @@ function Field({
   multiline = false,
   type = "text",
   required = false,
-  maxLength
+  maxLength,
+  readOnly = false
 }) {
   const props = {
     id: `exh-${name}`,
@@ -57,7 +58,8 @@ function Field({
     onChange: (event) => onChange(event.target.value),
     "aria-invalid": !!errors[name],
     "aria-describedby": errors[name] ? `exh-error-${name}` : undefined,
-    maxLength
+    maxLength,
+    readOnly
   }
   return (
     <div className={`exh-field ${multiline ? "exh-wide" : ""}`}>
@@ -98,6 +100,7 @@ export default function ExhibitorApplicationForm({
   submitLabel = "Submit application",
   allowDraft = false,
   representativesOnly = false,
+  personalOnly = false,
   onCancel,
   imported = false
 }) {
@@ -249,8 +252,8 @@ export default function ExhibitorApplicationForm({
         )}
         {step === 2 && (
           <>
-            <h2>Company representatives</h2>
-            {representativesOnly && (
+            <h2>{personalOnly ? "My representative details" : "Company representatives"}</h2>
+            {representativesOnly && !personalOnly && (
               <div className="exh-fields">
                 {field("country", "Country", { required: true })}
                 {field("stateRegion", "State / region", { required: true })}
@@ -264,7 +267,7 @@ export default function ExhibitorApplicationForm({
               <section key={rep.id} className="exh-representative">
                 <div className="exh-toolbar">
                   <h3>Representative {index + 1}</h3>
-                  <button
+                  {!personalOnly && <button
                     type="button"
                     className="exh-icon"
                     aria-label={`Remove representative ${index + 1}`}
@@ -277,10 +280,11 @@ export default function ExhibitorApplicationForm({
                     }
                   >
                     <Trash2 size={18} />
-                  </button>
+                  </button>}
                 </div>
                 <div className="exh-fields">
                   {[
+                    ["title", "Title (optional)"],
                     ["fullName", "Full name"],
                     ["email", "Email", "email"],
                     ["phone", "Phone", "tel"],
@@ -293,6 +297,7 @@ export default function ExhibitorApplicationForm({
                       label={label}
                       type={type}
                       value={rep[key]}
+                      readOnly={personalOnly && key === "email"}
                       required={["fullName", "email", "phone"].includes(key)}
                       errors={errors}
                       onChange={(value) => updateRep(index, key, value)}
@@ -333,7 +338,7 @@ export default function ExhibitorApplicationForm({
                 {rep.visaSupport && <Field name={`representatives.${index}.passportNumber`} label="Passport number" value={rep.passportNumber || ""} maxLength={15} required={!imported} errors={errors} onChange={value => updateRep(index, "passportNumber", value)} />}
               </section>
             ))}
-            <button
+            {!personalOnly && <button
               type="button"
               className="exh-button"
               disabled={
@@ -347,7 +352,7 @@ export default function ExhibitorApplicationForm({
               }
             >
               <Plus size={18} /> Add representative
-            </button>
+            </button>}
           </>
         )}
         {step === 3 && (

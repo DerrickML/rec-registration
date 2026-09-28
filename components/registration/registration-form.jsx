@@ -636,7 +636,7 @@ export default function RegistrationForm() {
 
     if (registrationType === "Exhibitor") {
       // Validate exhibitor members
-      const requiredMemberFields = ["title", "firstName", "lastName", "email", "phone"]
+      const requiredMemberFields = ["firstName", "lastName", "email", "phone"]
       const memberErrors = []
 
       exhibitorMembers.forEach((member, index) => {
@@ -662,7 +662,7 @@ export default function RegistrationForm() {
       }
     } else {
       // Validation for regular attendees
-      const requiredFields = ["title", "firstName", "lastName", "phone"]
+      const requiredFields = ["firstName", "lastName", "phone"]
       const missingFields = requiredFields.filter((field) => !formData[field].trim())
 
       // Add passport number validation if visa letter is required
@@ -1419,15 +1419,16 @@ export default function RegistrationForm() {
                             <CardContent className="space-y-4">
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                  <Label className="text-gray-700 font-medium">Title *</Label>
+                                  <Label className="text-gray-700 font-medium">Title (optional)</Label>
                                   <Select
                                     value={member.title}
-                                    onValueChange={(value) => updateExhibitorMember(index, "title", value)}
+                                    onValueChange={(value) => updateExhibitorMember(index, "title", value === "none" ? "" : value)}
                                   >
                                     <SelectTrigger className="h-12 bg-white border-gray-300 text-gray-800 focus:border-[#176F91]">
                                       <SelectValue placeholder="Select title" />
                                     </SelectTrigger>
                                     <SelectContent className="bg-white border-gray-200">
+                                      <SelectItem value="none">No title</SelectItem>
                                       {titles.map((title) => (
                                         <SelectItem
                                           key={title}
@@ -1543,16 +1544,17 @@ export default function RegistrationForm() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label htmlFor="title" className="text-gray-700 font-medium">
-                              Title *
+                              Title (optional)
                             </Label>
                             <Select
                               value={formData.title}
-                              onValueChange={(value) => setFormData((prev) => ({ ...prev, title: value }))}
+                              onValueChange={(value) => setFormData((prev) => ({ ...prev, title: value === "none" ? "" : value }))}
                             >
                               <SelectTrigger className="h-12 bg-white border-gray-300 text-gray-800 focus:border-[#176F91]">
                                 <SelectValue placeholder="Select title" />
                               </SelectTrigger>
                               <SelectContent className="bg-white border-gray-200">
+                                <SelectItem value="none">No title</SelectItem>
                                 {titles.map((title) => (
                                   <SelectItem key={title} value={title} className="text-gray-800 hover:bg-gray-100">
                                     {title}

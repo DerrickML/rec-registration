@@ -1,6 +1,7 @@
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { fetchHrPortalJson } from "@/lib/hr-portal-api"
+import { hasTrustedRequestOrigin } from "@/lib/request-origin"
 export const runtime = "nodejs"
 const cookie = "rec-exhibitor-session"
 const cookieOptions = {
@@ -12,11 +13,11 @@ const cookieOptions = {
 async function handler(request, context) {
   if (
     request.method !== "GET" &&
-    request.headers.get("origin") !== new URL(request.url).origin
+    !hasTrustedRequestOrigin(request)
   )
     return NextResponse.json(
       { error: "Cross-origin request rejected." },
-      { status: 403 }
+      { status: 403, headers: { "Cache-Control": "no-store" } }
     )
   const { path } = await context.params
   if (path.some((segment) => !/^[a-zA-Z0-9_-]+$/.test(segment)))

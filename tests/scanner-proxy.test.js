@@ -9,6 +9,7 @@ const request = (origin = "http://localhost:3002", path = "scans") => new Reques
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.stubEnv("NEXT_PUBLIC_SITE_URL", "")
   mocks.cookies.mockResolvedValue(new Map([["rec-scanner-session", { value: "http-only-secret" }]]))
   mocks.fetch.mockResolvedValue({ status: "accepted" })
 })
@@ -27,7 +28,7 @@ describe("scanner browser proxy", () => {
   it("sets a secure cookie on login and never returns the session token to JavaScript", async () => {
     vi.stubEnv("NODE_ENV", "production")
     mocks.fetch.mockResolvedValue({ token: "secret-token", expiresAt: "2030-01-01T00:00:00Z", operator: { name: "Scanner" } })
-    const response = await proxyScannerRequest("/auth/verify-otp", request(), { method: "POST", login: true })
+    const response = await proxyScannerRequest("/auth/verify-otp", request("https://rec.nrep.ug"), { method: "POST", login: true })
     expect((await response.json()).token).toBeUndefined()
     const cookie = response.headers.get("set-cookie")
     expect(cookie).toContain("HttpOnly")
@@ -48,7 +49,7 @@ describe("scanner browser proxy", () => {
     vi.stubEnv("REC_SCANNER_DEV_LOGIN_SECRET", "a".repeat(40))
     vi.stubEnv("HR_PORTAL_BASE_URL", "http://localhost:3000")
     expect(scannerDevEnabled(request())).toBe(false)
-    const response = await proxyScannerRequest("/auth/dev-login", request(), { method: "POST", development: true })
+    const response = await proxyScannerRequest("/auth/dev-login", request("https://rec.nrep.ug"), { method: "POST", development: true })
     expect(response.status).toBe(404)
     expect(mocks.fetch).not.toHaveBeenCalled()
   })
@@ -60,5 +61,21 @@ describe("scanner browser proxy", () => {
     expect(scannerDevEnabled(request())).toBe(true)
     vi.stubEnv("HR_PORTAL_BASE_URL", "https://hr.nrep.ug")
     expect(scannerDevEnabled(request())).toBe(false)
+  })
+  it("accepts production scan submissions behind an HTTP proxy without changing token authority", async () => {
+    vi.stubEnv("NODE_ENV", "production")
+    const response = await proxyScannerRequest("/scans", request("https://rec.nrep.ug"), { method: "POST" })
+    expect(response.status).toBe(200)
+    expect(mocks.fetch).toHaveBeenCalledWith("/scans", expect.objectContaining({ bearerToken: "http-only-secret" }))
+  })
+  it("blocks missing, sibling and foreign origins before forwarding scanner mutations", async () => {
+    vi.stubEnv("NODE_ENV", "production")
+    for (const origin of ["https://hr.nrep.ug", "https://evil.example", "null", ""]) {
+      expect((await proxyScannerRequest("/scans", request(origin), { method: "POST" })).status).toBe(403)
+    }
+    const missing = request()
+    missing.headers.delete("origin")
+    expect((await proxyScannerRequest("/scans", missing, { method: "POST" })).status).toBe(403)
+    expect(mocks.fetch).not.toHaveBeenCalled()
   })
 })

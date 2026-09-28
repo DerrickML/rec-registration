@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
 import { fetchHrPortalJson } from "@/lib/hr-portal-api"
 import { excursionSource } from "@/lib/excursions"
+import { hasTrustedRequestOrigin } from "@/lib/request-origin"
 export async function POST(request, { params }) {
-  const origin = request.headers.get("origin")
-  if (origin && origin !== new URL(request.url).origin) return new NextResponse(null, { status: 403 })
+  if (!hasTrustedRequestOrigin(request, { allowMissingOrigin: true })) return new NextResponse(null, { status: 403 })
   try {
     const reader = request.body?.getReader()
     if (!reader) return new NextResponse(null, { status: 400 })

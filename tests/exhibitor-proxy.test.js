@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 const mocks = vi.hoisted(() => ({ fetch: vi.fn(), cookies: vi.fn() }))
 vi.mock("@/lib/hr-portal-api", () => ({ fetchHrPortalJson: mocks.fetch }))
 vi.mock("next/headers", () => ({ cookies: mocks.cookies }))
@@ -7,10 +7,34 @@ const request = (path, origin = "http://localhost:3007") => new Request(`http://
 const context = path => ({ params: Promise.resolve({ path: path.split("/") }) })
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.stubEnv("NEXT_PUBLIC_SITE_URL", "")
   mocks.cookies.mockResolvedValue(new Map([["rec-exhibitor-session", { value: "private-cookie-token" }]]))
   mocks.fetch.mockResolvedValue({ success: true })
 })
+afterEach(() => vi.unstubAllEnvs())
 describe("exhibitor browser proxy", () => {
+  it("accepts production OTP requests behind an internal HTTP proxy", async () => {
+    vi.stubEnv("NODE_ENV", "production")
+    const response = await POST(request("auth/request-otp", "https://rec.nrep.ug"), context("auth/request-otp"))
+    expect(response.status).toBe(200)
+    expect(mocks.fetch).toHaveBeenCalledWith("/api/v1/rec/exhibitors/auth/request-otp", expect.any(Object))
+  })
+  it("does not use an internal request URL or spoofed forwarded host as a production origin", async () => {
+    vi.stubEnv("NODE_ENV", "production")
+    const forged = request("applications", "https://evil.example")
+    forged.headers.set("x-forwarded-host", "evil.example")
+    forged.headers.set("x-forwarded-proto", "https")
+    expect((await POST(forged, context("applications"))).status).toBe(403)
+    expect((await POST(request("applications"), context("applications"))).status).toBe(403)
+    expect(mocks.fetch).not.toHaveBeenCalled()
+  })
+  it("requires Origin for browser mutations but not read-only requests", async () => {
+    const missing = request("applications")
+    missing.headers.delete("origin")
+    expect((await POST(missing, context("applications"))).status).toBe(403)
+    expect(mocks.fetch).not.toHaveBeenCalled()
+    expect((await GET(new Request("http://localhost:3007/api/exhibitors/configuration"), context("configuration"))).status).toBe(200)
+  })
   it("rejects foreign origins before forwarding", async () => {
     expect((await POST(request("applications", "https://other.example"), context("applications"))).status).toBe(403)
     expect(mocks.fetch).not.toHaveBeenCalled()

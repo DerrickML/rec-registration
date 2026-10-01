@@ -5,6 +5,7 @@ import Link from "next/link"
 import { ArrowUpRight } from "lucide-react"
 import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
+import MobileAppCta from "@/components/mobile-apps/mobile-app-cta"
 import ExcursionCta from "@/components/excursions/excursion-cta"
 import PageHero from "@/components/layout/page-hero"
 import ConferenceSelect from "@/components/layout/conference-select"
@@ -132,6 +133,7 @@ export default function MediaPage() {
           <MediaDirectory key={selectedId} items={items} />
         )}
         <ExcursionCta placement="media" compact />
+        <MobileAppCta placement="media" />
       </main>
       <Footer conference={siteConference} />
     </div>

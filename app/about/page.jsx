@@ -5,6 +5,7 @@ import { ArrowRight, ArrowUpRight } from "lucide-react"
 import { useConference } from "@/components/layout/use-conference"
 import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
+import MobileAppCta from "@/components/mobile-apps/mobile-app-cta"
 import PageHero from "@/components/layout/page-hero"
 import ConferencePhoto from "@/components/layout/conference-photo"
 import ExcursionCta from "@/components/excursions/excursion-cta"
@@ -156,6 +157,7 @@ export default function AboutPage() {
           </div>
         </section>
         <ExcursionCta placement="about" />
+        <MobileAppCta placement="about" />
       </main>
       <Footer conference={conference} />
     </div>

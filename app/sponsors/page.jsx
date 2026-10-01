@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { ArrowUpRight } from "lucide-react"
 import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
+import MobileAppCta from "@/components/mobile-apps/mobile-app-cta"
 import PageHero from "@/components/layout/page-hero"
 import { useConference } from "@/components/layout/use-conference"
 import {
@@ -104,6 +105,7 @@ export default function SponsorsPage() {
           </div>
         </section>
       </main>
+      <MobileAppCta placement="sponsors" />
       <Footer conference={conference} />
     </div>
   )

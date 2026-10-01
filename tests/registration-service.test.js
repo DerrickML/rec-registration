@@ -211,7 +211,7 @@ describe("registration service", () => {
       mode: "new",
       message: "A verification code has been sent to your email address.",
     })
-    expect(mailer.sendOtp).toHaveBeenCalledWith("new@example.com", "123456", 10)
+    expect(mailer.sendOtp).toHaveBeenCalledWith("new@example.com", "123456", 10, expect.objectContaining({ $id: "conf" }))
 
     const verified = await svc.verifyEdit({ email: "new@example.com", otp: "123456" })
     expect(verified.status).toBe("verified_new")
@@ -237,7 +237,7 @@ describe("registration service", () => {
       message: "A verification code has been sent to your email address.",
     })
     expect(result.registrant).toBeUndefined()
-    expect(mailer.sendOtp).toHaveBeenCalledWith("old@example.com", "123456", 10)
+    expect(mailer.sendOtp).toHaveBeenCalledWith("old@example.com", "123456", 10, expect.objectContaining({ $id: "conf" }))
   })
 
   it("rejects wrong OTP attempts and verifies the correct code", async () => {

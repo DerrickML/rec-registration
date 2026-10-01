@@ -5,6 +5,7 @@ import { useConference } from "@/components/layout/use-conference"
 import { conferenceExtras } from "@/lib/conference-display"
 import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
+import MobileAppCta from "@/components/mobile-apps/mobile-app-cta"
 import PageHero from "@/components/layout/page-hero"
 import ExcursionCta from "@/components/excursions/excursion-cta"
 import {
@@ -150,6 +151,7 @@ export default function VenuePage() {
           </div>
         </section>
         <ExcursionCta placement="venue" />
+        <MobileAppCta placement="venue" />
       </main>
       <Footer conference={conference} />
     </div>

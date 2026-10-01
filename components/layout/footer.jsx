@@ -6,8 +6,9 @@ import { ArrowUpRight, Mail, Phone } from "lucide-react"
 import { useExcursion } from "@/components/excursions/excursion-provider"
 import { ExcursionLink } from "@/components/excursions/excursion-engagement"
 import { conferenceExtras } from "@/lib/conference-display"
+import { FooterApps } from "@/components/mobile-apps/mobile-app-cta"
 
-export default function Footer({ conference }) {
+export default function Footer({ conference, appConfiguration }) {
   const excursion = useExcursion()
   const socials = conferenceExtras(conference?.socialsJson).socials || {}
   return (
@@ -104,6 +105,7 @@ export default function Footer({ conference }) {
             </div>
           </div>
         </div>
+        <FooterApps configuration={appConfiguration} />
         <div className="footer-bottom">
           <p>
             &copy; {new Date().getFullYear()} National Renewable Energy

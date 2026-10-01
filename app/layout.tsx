@@ -3,6 +3,7 @@ import "./globals.css"
 import "./public-site.css"
 import { Toaster } from "@/components/ui/toaster"
 import ExcursionProvider from "@/components/excursions/excursion-provider"
+import MobileAppProvider from "@/components/mobile-apps/mobile-app-provider"
 import SiteMotion from "@/components/layout/site-motion"
 import {
   createEventJsonLd,
@@ -49,7 +50,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <ExcursionProvider>{children}</ExcursionProvider>
+        <ExcursionProvider><MobileAppProvider>{children}</MobileAppProvider></ExcursionProvider>
         <SiteMotion />
         <StructuredData conferencePromise={structuredDataPromise} />
         <Toaster />

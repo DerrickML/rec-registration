@@ -4,8 +4,11 @@ import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { CalendarDays, Download, FileText, LoaderCircle, MapPin, RefreshCw, ShieldCheck } from "lucide-react"
+import MobileAppCta from "@/components/mobile-apps/mobile-app-cta"
+import { useAppConfiguration } from "@/components/mobile-apps/mobile-app-provider"
 
 export default function DigitalBadge({ token, initialBadge }) {
+  const { configuration: appConfiguration } = useAppConfiguration(initialBadge?.conference?.$id || "", Boolean(initialBadge?.conference?.$id))
   const [badge, setBadge] = useState(initialBadge)
   const [warning, setWarning] = useState("")
   const [refreshing, setRefreshing] = useState(false)
@@ -78,6 +81,7 @@ export default function DigitalBadge({ token, initialBadge }) {
         </div>
       </section>
     </div> : <section className="mx-auto max-w-xl py-12 text-center"><h1 className="text-xl font-bold">Badge unavailable</h1><p className="mt-2 text-sm text-[#526774]">Please contact the conference team for assistance.</p></section>}
+    {badge && <div className="mx-auto mt-8 max-w-4xl"><MobileAppCta placement="badge" configuration={appConfiguration} /></div>}
     <p className="mx-auto mt-8 max-w-4xl border-t border-[#d8e2e9] pt-4 text-xs leading-5 text-[#526774]">This badge is personal to the named attendee. Entry is subject to the registered days and scan-event rules.</p>
   </main>
 }

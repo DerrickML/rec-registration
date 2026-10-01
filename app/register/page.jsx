@@ -6,6 +6,7 @@ import { apiService } from "../../lib/api-service"
 import RegistrationForm from "../../components/registration/registration-form"
 import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
+import MobileAppCta from "@/components/mobile-apps/mobile-app-cta"
 import Link from "next/link"
 
 export default function RegisterPage() {
@@ -37,6 +38,7 @@ export default function RegisterPage() {
       <main id="main-content" className="flex-1" tabIndex={-1}>
         <div className="mx-auto max-w-5xl px-6 pt-24 text-right"><Link href="/exhibit/apply" className="font-semibold text-[#0B5E78] underline underline-offset-4">Applying as an exhibiting company?</Link></div>
         <RegistrationForm />
+        <MobileAppCta placement="register" />
       </main>
       <Footer conference={conference} />
     </div>

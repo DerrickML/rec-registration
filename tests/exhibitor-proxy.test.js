@@ -13,6 +13,12 @@ beforeEach(() => {
 })
 afterEach(() => vi.unstubAllEnvs())
 describe("exhibitor browser proxy", () => {
+  it("forwards admission checks and coupon previews with the private applicant session", async () => {
+    await GET(new Request("http://localhost:3007/api/exhibitors/admission"), context("admission"))
+    expect(mocks.fetch).toHaveBeenCalledWith("/api/v1/rec/exhibitors/admission", expect.objectContaining({ bearerToken: "private-cookie-token" }))
+    await POST(request("coupon-preview"), context("coupon-preview"))
+    expect(mocks.fetch).toHaveBeenCalledWith("/api/v1/rec/exhibitors/coupon-preview", expect.objectContaining({ bearerToken: "private-cookie-token" }))
+  })
   it("accepts production OTP requests behind an internal HTTP proxy", async () => {
     vi.stubEnv("NODE_ENV", "production")
     const response = await POST(request("auth/request-otp", "https://rec.nrep.ug"), context("auth/request-otp"))

@@ -102,7 +102,10 @@ export default function ExhibitorApplicationForm({
   representativesOnly = false,
   personalOnly = false,
   onCancel,
-  imported = false
+  imported = false,
+  admissionPending = false,
+  initialCouponCode = "",
+  onCouponPreview
 }) {
   const [data, setData] = useState(() => {
     const value = initialData ? { ...structuredClone(initialData), ...(!imported && !representativesOnly ? { consentAccepted: false } : {}) } : emptyExhibitorApplication()
@@ -113,6 +116,8 @@ export default function ExhibitorApplicationForm({
     [busy, setBusy] = useState(false),
     [errors, setErrors] = useState({}),
     [error, setError] = useState("")
+  const [couponCode, setCouponCode] = useState(initialCouponCode),
+    [checking, setChecking] = useState(false), [couponMessage, setCouponMessage] = useState(null)
   const update = (key, value) => {
     setData((previous) => ({ ...previous, [key]: value }))
     setErrors((previous) => ({ ...previous, [key]: undefined }))
@@ -133,7 +138,7 @@ export default function ExhibitorApplicationForm({
     setError("")
     setErrors({})
     try {
-      await onSave(data, submit)
+      await onSave(data, submit, admissionPending ? { couponCode } : {})
     } catch (e) {
       setError(e.message)
       setErrors(e.fields || {})
@@ -227,6 +232,23 @@ export default function ExhibitorApplicationForm({
             </label>
             {data.associationMember &&
               field("association", "Association name", { required: true })}
+            {admissionPending && <div className="exh-field">
+              <label htmlFor="exh-coupon-code">Company exhibition coupon{settings.couponRequired ? " *" : " (optional)"}</label>
+              <input id="exh-coupon-code" value={couponCode} maxLength={10} autoComplete="off"
+                disabled={checking} aria-invalid={!!errors.couponCode} aria-describedby="exh-coupon-help"
+                onChange={e => { setCouponCode(e.target.value.trim().toUpperCase()); setCouponMessage(null) }} />
+              <small id="exh-coupon-help">One coupon allocation covers your company, not each representative. Your company details remain separate from the sponsor. Submission does not guarantee approval.</small>
+              {errors.couponCode && <small role="alert" className="exh-error">{errors.couponCode}</small>}
+              <button type="button" className="exh-button" disabled={checking || !couponCode}
+                onClick={async () => {
+                  setChecking(true); setCouponMessage(null)
+                  try { setCouponMessage({ data: await onCouponPreview(couponCode) }) }
+                  catch (e) { setCouponMessage({ error: e.message }) }
+                  finally { setChecking(false) }
+                }}>{checking && <LoaderCircle size={18} className="exh-spin" />}{checking ? "Checking..." : "Check coupon"}</button>
+              {couponMessage?.data && <p role="status" className="exh-alert">Sponsor: <strong>{couponMessage.data.sponsorOrganization}</strong> / {couponMessage.data.sponsorSector}. {couponMessage.data.message} Availability is checked again on submission.</p>}
+              {couponMessage?.error && <p className="exh-error" role="alert">{couponMessage.error}</p>}
+            </div>}
           </>
         )}
         {step === 1 && (

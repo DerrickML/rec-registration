@@ -140,6 +140,16 @@ async function verifiedExistingRegistrationToken(svc, email) {
 }
 
 describe("registration service", () => {
+  it.each([
+    [{ usageScope: "exhibitor_application" }, "Company exhibition coupons"],
+    [{ conferenceId: "other-conference" }, "selected conference"],
+  ])("rejects company-scoped and wrong-conference coupons in individual registration", async (changes, message) => {
+    const db = createDb({ conferences: [activeConference()], coupons: [{ $id: "coupon", coupon: "SAVE10", type: "attendee", conference: 2025, isActive: true, numberOfUsers: 3, usersLeft: 3, organization: "Sponsor", sector: "NGO", ...changes }] })
+    const svc = service(db), editToken = await verifiedNewRegistrationToken(svc)
+    await expect(svc.submit(attendeeInput({ editToken }))).rejects.toThrow(message)
+    expect(db.tables.registrants).toHaveLength(0)
+    expect(db.tables.coupons[0].usersLeft).toBe(3)
+  })
   it("cannot bypass company approval through legacy exhibitor registration", async () => {
     const db = createDb({ conferences: [activeConference()] })
     const svc = service(db, {}, { exhibitorApplicationEnabled: async () => true })

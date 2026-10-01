@@ -58,10 +58,12 @@ export default function ExhibitorPortal() {
     [reason, setReason] = useState(""),
     [consent, setConsent] = useState(false),
     [revision, setRevision] = useState(0)
+  const [admissionAccess, setAdmissionAccess] = useState(null)
   useEffect(() => {
     let active = true
     setLoading(true)
     setSession(null)
+    setAdmissionAccess(null)
     setApplication(null)
     setListing(null)
     setMode("list")
@@ -89,6 +91,8 @@ export default function ExhibitorPortal() {
   useEffect(() => {
     let active = true
     if (!session) return
+    setAdmissionAccess(null)
+    api("admission").then(result => active && setAdmissionAccess(result)).catch(e => active && setError(e.message))
     api(`applications?page=${page}&limit=10`)
       .then((result) => active && setListing(result))
       .catch((e) => active && setError(e.message))
@@ -111,7 +115,7 @@ export default function ExhibitorPortal() {
       setBusy(false)
     }
   }
-  const save = async (data, submit) => {
+  const save = async (data, submit, admission = {}) => {
     let result
     if (mode === "personal") {
       const allowed = ["title", "fullName", "firstName", "lastName", "phone", "days", "visaSupport", "passportNumber"]
@@ -132,6 +136,7 @@ export default function ExhibitorPortal() {
         mode === "new" ? "applications" : `applications/${application.$id}`,
         {
           data,
+          ...admission,
           submit,
           revision: application?.revision,
           requestId: crypto.randomUUID()
@@ -195,6 +200,7 @@ export default function ExhibitorPortal() {
                 try {
                   await api("auth/logout", {})
                   setSession(null)
+                  setAdmissionAccess(null)
                   setApplication(null)
                   setMode("list")
                   setCodeSent(false)
@@ -321,6 +327,7 @@ export default function ExhibitorPortal() {
                         {configuration.applicationsOpen && (
                           <button
                             className="exh-button exh-primary"
+                            disabled={busy || !admissionAccess}
                             onClick={() => {
                               setApplication(null)
                               setMode("new")
@@ -332,6 +339,7 @@ export default function ExhibitorPortal() {
                           </button>
                         )}
                       </div>
+                      {admissionAccess?.couponRequiredForNewApplication && <p className="exh-alert">New company applications require a company exhibition coupon. Existing admitted applications remain accessible without another coupon.</p>}
                       <div className="exh-table-wrap">
                         <table className="exh-table">
                           <thead>
@@ -415,6 +423,9 @@ export default function ExhibitorPortal() {
                       allowDraft={!["representatives", "personal"].includes(mode) && application?.status !== "submitted"}
                       representativesOnly={["representatives", "personal"].includes(mode)}
                       personalOnly={mode === "personal"}
+                      admissionPending={mode === "new" || (mode === "edit" && application.admission?.mode === "pending")}
+                      initialCouponCode={application?.pendingCouponCode || ""}
+                      onCouponPreview={couponCode => api("coupon-preview", { couponCode })}
                       submitLabel={
                         ["representatives", "personal"].includes(mode)
                           ? "Save representative details"
@@ -436,6 +447,7 @@ export default function ExhibitorPortal() {
                           </span>
                         </div>
                         {application.accessRole !== "representative" && <><p>{application.data.proposal}</p>
+                        {application.admission?.sponsorOrganization && <p><strong>Coupon sponsor:</strong> {application.admission.sponsorOrganization}</p>}
                         <p>
                           <strong>Category:</strong> {application.data.category}
                         </p></>}

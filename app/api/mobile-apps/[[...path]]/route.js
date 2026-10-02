@@ -35,7 +35,7 @@ export async function GET(request, context) {
     }
     const output = new Headers(headers)
     output.set("Content-Type", "application/vnd.android.package-archive")
-    const filename = /filename="(REC-\d+\.apk)"/.exec(response.headers.get("content-disposition") || "")?.[1] || "REC.apk"
+    const filename = /filename="(REC-[A-Za-z0-9_-]+\.apk)"/.exec(response.headers.get("content-disposition") || "")?.[1] || "REC.apk"
     output.set("Content-Disposition", `attachment; filename="${filename}"`)
     for (const key of ["content-length", "content-range", "accept-ranges", "x-rec-apk-sha256"]) if (response.headers.has(key)) output.set(key, response.headers.get(key))
     if (request.method === "HEAD") await response.body?.cancel()

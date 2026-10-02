@@ -3,10 +3,14 @@ import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 const mocks = vi.hoisted(() => ({ binary: vi.fn(), json: vi.fn(), configuration: null }))
 vi.mock("@/lib/hr-portal-api", () => ({ fetchHrPortalBinary: mocks.binary, fetchHrPortalJson: mocks.json }))
-vi.mock("@/components/mobile-apps/mobile-app-provider", () => ({ useMobileApps: () => mocks.configuration }))
+vi.mock("@/components/mobile-apps/mobile-app-provider", () => ({ useMobileApps: () => mocks.configuration, useAppConfiguration: () => ({ configuration: mocks.configuration, loading: false, error: "", retry: vi.fn() }) }))
+vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams("conferenceId=c") }))
+vi.mock("@/components/layout/navbar", () => ({ default: () => null }))
+vi.mock("@/components/layout/footer", () => ({ default: () => null }))
 import { GET, HEAD } from "../app/api/mobile-apps/[[...path]]/route"
-import { availableAppPlatforms, safeAppStoreRedirect, appPageUrl } from "../lib/mobile-apps"
+import { availableAppPlatforms, apkReleaseDetails, safeAppStoreRedirect, appPageUrl } from "../lib/mobile-apps"
 import MobileAppCta, { AppDownloadButtons, FooterApps } from "../components/mobile-apps/mobile-app-cta"
+import MobileAppPage from "../components/mobile-apps/mobile-app-page"
 import { createRegistrationMailer } from "../lib/registration-mailer"
 
 const configuration = { enabled: true, conferenceId: "c", content: { appName: "REC & EXPO", ctaTitle: "Take REC with you", ctaDescription: "Official REC app", placements: ["home", "footer"] }, platforms: [{ platform: "android", available: true, source: "apk" }, { platform: "ios", available: true, source: "app_store" }] }
@@ -42,6 +46,26 @@ it("blocks unexpected HTML, invalid ranges, private diagnostics, and withdrawn d
   expect((await call(["android"], "", "GET", { Range: "bytes=0-1,8-9" })).status).toBe(416)
   mocks.binary.mockResolvedValue(new Response("private diagnostic", { status: 404 }))
   const response = await call(["android"]); expect(response.status).toBe(404); expect(await response.text()).not.toContain("private")
+})
+it("preserves release ID filenames without requiring a version code or checksum", async () => {
+  mocks.binary.mockResolvedValue(new Response("APK!", { headers: { "Content-Type": "application/vnd.android.package-archive", "Content-Disposition": 'attachment; filename="REC-release-123.apk"' } }))
+  const response = await call(["android"])
+  expect(response.status).toBe(200); expect(response.headers.get("content-disposition")).toContain("REC-release-123.apk")
+  expect(response.headers.has("x-rec-apk-sha256")).toBe(false); expect(await response.text()).toBe("APK!")
+})
+it("omits unavailable APK metadata and preserves legacy release details", () => {
+  const release = { size: 30_000_000, publishedAt: "2026-10-01T22:00:00Z", versionName: "1.2.0" }
+  expect(apkReleaseDetails(release)).toEqual([["Version", "1.2.0"], ["File size", "30.0 MB"], ["Published", "2 Oct 2026 (EAT)"]])
+  const details = apkReleaseDetails({ ...release, versionCode: 12, minSdk: 26, sha256: "a".repeat(64) })
+  expect(details).toContainEqual(["Version", "1.2.0 (code 12)"]); expect(details).toContainEqual(["Minimum Android API", "26"])
+  expect(details).toContainEqual(["SHA-256 checksum", "a".repeat(64)])
+  expect(apkReleaseDetails({ size: null, publishedAt: "invalid", sha256: "unverified" })).toEqual([])
+})
+it("renders staff-published APKs without blank checksum rows or null version codes", () => {
+  mocks.configuration = { ...configuration, conference: { title: "REC26" }, platforms: [{ platform: "android", available: true, source: "apk", size: 30_000_000, publishedAt: "2026-10-01T10:00:00Z", versionName: "1.2.0" }] }
+  const html = renderToStaticMarkup(createElement(MobileAppPage))
+  expect(html).toContain("Download APK"); expect(html).toContain("1.2.0"); expect(html).toContain("30.0 MB")
+  expect(html).not.toMatch(/SHA-256 checksum|Minimum Android API|undefined|code null/)
 })
 it("uses HEAD without buffering a large APK", async () => {
   mocks.binary.mockResolvedValue(new Response(null, { headers: { "Content-Type": "application/vnd.android.package-archive", "Content-Length": "300000000" } }))

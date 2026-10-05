@@ -18,6 +18,7 @@ export function PageLoadingState({
     <div
       className={`page-loading ${inline ? "loading-inline" : ""}`}
       aria-busy="true"
+      data-site-motion="off"
     >
       <div className="loading-brand">
         <Image src="/NREP.png" alt="NREP" width={56} height={56} />
@@ -62,7 +63,7 @@ export function PageErrorState({
   actionLabel = "Back to home",
 }) {
   return (
-    <main className="page-error" id="main-content">
+    <main className="page-error" id="main-content" data-site-motion="off">
       <Image src="/NREP.png" alt="NREP" width={64} height={64} />
       <AlertCircle size={28} className="text-primary" />
       <h1>{title}</h1>

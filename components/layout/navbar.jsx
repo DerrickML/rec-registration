@@ -100,12 +100,11 @@ export default function Navbar({ conference }) {
               <nav className="mobile-nav" aria-label="Mobile navigation">
                 {navLinks}
               </nav>
-              <Link
-                href="/scanner"
-                className="site-text-link"
-                onClick={() => setMobileOpen(false)}
-              >
+              <Link href="/scanner" className="site-text-link" onClick={() => setMobileOpen(false)}>
                 Scanner access <ArrowUpRight size={16} />
+              </Link>
+              <Link href="/reporting" className="site-text-link" onClick={() => setMobileOpen(false)}>
+                Rapporteur <ArrowUpRight size={16} />
               </Link>
             </SheetContent>
           </Sheet>

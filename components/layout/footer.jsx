@@ -80,6 +80,7 @@ export default function Footer({ conference, appConfiguration }) {
                 NREP website <ArrowUpRight size={14} />
               </a>
               <Link href="/scanner">Scanner access</Link>
+              <Link href="/reporting">Rapporteur</Link>
             </nav>
           </div>
           <div>

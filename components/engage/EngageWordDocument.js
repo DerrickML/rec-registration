@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useImperativeHandle, useMemo, useRef, useState, forwardRef, Component } from "react"
+import { useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, forwardRef, Component } from "react"
 import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import TextAlign from "@tiptap/extension-text-align"
@@ -373,6 +373,7 @@ function WordToolbar({ editor }) {
   const lastTextSelectionRef = useRef(null)
   const [ribbonTab, setRibbonTab] = useState("home")
   const [colorMenu, setColorMenu] = useState(null)
+  const [captionTarget, setCaptionTarget] = useState(null)
   const [imagePanelOpen, setImagePanelOpen] = useState(false)
   const [pendingSrc, setPendingSrc] = useState("")
   const [pendingName, setPendingName] = useState("")
@@ -388,7 +389,12 @@ function WordToolbar({ editor }) {
   // target while the author uses the Font ribbon (mousedown blurs the input).
   useEffect(() => {
     if (!editor) return undefined
-    const refresh = () => setToolbarTick((n) => n + 1)
+    const refresh = () => {
+      const live = getCaptionFormatTarget(editor)
+      const remembered = captionFormatRef.current
+      setCaptionTarget(live ? { ...live, input: live.input || remembered?.input || null } : remembered)
+      setToolbarTick((n) => n + 1)
+    }
     const rememberTextSelection = () => {
       try {
         const { from, to, empty } = editor.state.selection
@@ -421,6 +427,7 @@ function WordToolbar({ editor }) {
     editor.on("transaction", refresh)
     document.addEventListener("focusin", onFocusIn)
     document.addEventListener("focusout", onFocusOut)
+    refresh()
     return () => {
       editor.off("selectionUpdate", rememberTextSelection)
       editor.off("transaction", refresh)
@@ -431,13 +438,6 @@ function WordToolbar({ editor }) {
 
   if (!editor) return null
 
-  const liveCaptionTarget = getCaptionFormatTarget(editor)
-  const captionTarget = liveCaptionTarget
-    ? {
-        ...liveCaptionTarget,
-        input: liveCaptionTarget.input || captionFormatRef.current?.input || null,
-      }
-    : captionFormatRef.current
   const captionAttrs = captionTarget?.node?.attrs || null
 
   const rememberSelectionForToolbar = () => {
@@ -2301,29 +2301,32 @@ export const EngageWordDocument = forwardRef(function EngageWordDocument(
   // template shell back into TipTap — that wiped Mission / Date / Activity typing.
   const seedHtml = String(content?._documentHtml || "").trim() ? "" : blankSeedHtml
 
-  const initialHtmlRef = useRef(
+  const [initialHtml] = useState(() =>
     normalizeEngageEditorHtml(content?._documentHtml || "", sections, letterhead) || null
   )
+  const initialHtmlRef = useRef(initialHtml)
   const applyingRef = useRef(false)
-  const lastEmittedHtml = useRef(initialHtmlRef.current || "")
+  const lastEmittedHtml = useRef(initialHtml || "")
   const lastLocalEditAtRef = useRef(0)
   /** After TipTap has the author's live doc, never setContent from React props again. */
-  const authorOwnsDocRef = useRef(Boolean(initialHtmlRef.current))
+  const authorOwnsDocRef = useRef(Boolean(initialHtml))
   const emitTimerRef = useRef(null)
   const editorRef = useRef(null)
   const sectionsRef = useRef(sections)
-  sectionsRef.current = sections
   const letterheadRef = useRef(letterhead)
-  letterheadRef.current = letterhead
   const titleFieldKeyRef = useRef(titleFieldKey)
-  titleFieldKeyRef.current = titleFieldKey
   const headerFieldKeysRef = useRef(headerFieldKeys)
-  headerFieldKeysRef.current = headerFieldKeys
   const onChangeFieldRef = useRef(onChangeField)
-  onChangeFieldRef.current = onChangeField
+  useLayoutEffect(() => {
+    sectionsRef.current = sections
+    letterheadRef.current = letterhead
+    titleFieldKeyRef.current = titleFieldKey
+    headerFieldKeysRef.current = headerFieldKeys
+    onChangeFieldRef.current = onChangeField
+  }, [sections, letterhead, titleFieldKey, headerFieldKeys, onChangeField])
   // Prefer saved HTML over an empty template seed whenever it exists.
   const startupHtml =
-    initialHtmlRef.current ||
+    initialHtml ||
     (content?._documentHtml
       ? normalizeEngageEditorHtml(content._documentHtml, sections, letterhead)
       : seedHtml || null)

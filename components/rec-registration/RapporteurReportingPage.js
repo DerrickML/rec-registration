@@ -151,9 +151,29 @@ export default function ReportingPage() {
     setError("")
     try {
       const data = await fetchJson(`/api/reporting/auth/request-otp?email=${encodeURIComponent(email)}`)
-      setConferences(data.conferences || [])
-      setConferenceId(data.conferences?.[0]?.$id || "")
-      if (!data.conferences?.length) setError("This email is not assigned as a rapporteur.")
+      const found = data.conferences || []
+      setConferences(found)
+      setConferenceId(found[0]?.$id || "")
+      if (!found.length) setError("This email is not assigned as a rapporteur.")
+      else if (found.length === 1) await requestCode(found[0].$id)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function requestCode(targetConferenceId) {
+    setBusy(true)
+    setError("")
+    try {
+      const data = await fetchJson("/api/reporting/auth/request-otp", {
+        method: "POST",
+        body: JSON.stringify({ email, conferenceId: targetConferenceId }),
+      })
+      setConferenceId(targetConferenceId)
+      setOtpId(data.otpId || "")
+      setDevCode(data.devOtpCode || "")
     } catch (err) {
       setError(err.message)
     } finally {
@@ -163,20 +183,15 @@ export default function ReportingPage() {
 
   async function sendCode(event) {
     event.preventDefault()
-    setBusy(true)
+    await requestCode(conferenceId)
+  }
+
+  function restartSignIn() {
+    setOtpId("")
+    setCode("")
+    setDevCode("")
+    setConferences([])
     setError("")
-    try {
-      const data = await fetchJson("/api/reporting/auth/request-otp", {
-        method: "POST",
-        body: JSON.stringify({ email, conferenceId }),
-      })
-      setOtpId(data.otpId || "")
-      setDevCode(data.devOtpCode || "")
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setBusy(false)
-    }
   }
 
   async function verify(event) {
@@ -321,6 +336,85 @@ export default function ReportingPage() {
   const activeGroup = groups.find((group) => group.label === activeDay)
   const onDesk = Boolean(home && !report)
 
+  if (!home) {
+    const step = otpId ? "code" : conferences.length > 1 ? "conference" : "email"
+    return (
+      <main className="rec-report-page rec-rap-auth" data-site-motion="off">
+        <div className="rec-rap-auth-card">
+          <div className="rec-rap-auth-brand">
+            <img src="/NREP.png" alt="NREP" width="44" height="44" />
+            <span>
+              <small>REC26 &amp; Expo</small>
+              <strong>Rapporteur</strong>
+            </span>
+          </div>
+
+          <h1>{step === "code" ? "Enter your code" : "Sign in"}</h1>
+          <p className="rec-rap-auth-hint">
+            {step === "code"
+              ? `We emailed a 6-digit code to ${email}.`
+              : step === "conference"
+                ? "You are assigned on more than one conference. Choose the one you are reporting for."
+                : "Use the email address the REC team assigned to you."}
+          </p>
+
+          {error ? <div className="rec-rap-auth-error" role="alert">{error}</div> : null}
+
+          {step === "email" ? (
+            <form onSubmit={lookup}>
+              <label htmlFor="report-email">Email address</label>
+              <input
+                id="report-email"
+                type="email"
+                autoComplete="email"
+                autoFocus
+                placeholder="you@example.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+              />
+              <button type="submit" disabled={busy || !email}>{busy ? "Checking…" : "Continue"}</button>
+            </form>
+          ) : null}
+
+          {step === "conference" ? (
+            <form onSubmit={sendCode}>
+              <label htmlFor="report-conference">Conference</label>
+              <select id="report-conference" value={conferenceId} onChange={(event) => setConferenceId(event.target.value)} required>
+                {conferences.map((conference) => <option key={conference.$id} value={conference.$id}>{conference.title}</option>)}
+              </select>
+              <button type="submit" disabled={busy || !conferenceId}>{busy ? "Sending…" : "Send access code"}</button>
+              <button type="button" className="rec-rap-auth-link" onClick={restartSignIn}>Use a different email</button>
+            </form>
+          ) : null}
+
+          {step === "code" ? (
+            <form onSubmit={verify}>
+              {devCode ? <p className="rec-rap-auth-dev">Test mode, no email is configured here. Your code is <b>{devCode}</b>.</p> : null}
+              <label htmlFor="report-code">Access code</label>
+              <input
+                id="report-code"
+                className="rec-rap-auth-code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                autoFocus
+                maxLength={6}
+                placeholder="000000"
+                value={code}
+                onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                required
+              />
+              <button type="submit" disabled={busy || code.length !== 6}>{busy ? "Signing in…" : "Open my sessions"}</button>
+              <button type="button" className="rec-rap-auth-link" onClick={() => requestCode(conferenceId)} disabled={busy}>Send a new code</button>
+              <button type="button" className="rec-rap-auth-link" onClick={restartSignIn} disabled={busy}>Use a different email</button>
+            </form>
+          ) : null}
+        </div>
+        <Link href="/" className="rec-rap-auth-back">← Back to the conference site</Link>
+      </main>
+    )
+  }
+
   return (
     <main className={onDesk ? "rec-report-page has-side" : "rec-report-page"} data-site-motion="off">
       {onDesk ? (
@@ -407,33 +501,6 @@ export default function ReportingPage() {
       ) : null}
       {onDesk ? null : <div className="rec-desk">
       {error ? <p className="warn" role="alert">{error}</p> : null}
-      {!home ? (
-        <section className="rec-report-card rec-desk-signin">
-          <form onSubmit={conferences.length ? sendCode : lookup}>
-            <label htmlFor="report-email">Email</label>
-            <input id="report-email" type="email" value={email} onChange={(event) => { setEmail(event.target.value); setConferences([]) }} required />
-            {conferences.length ? (
-              <>
-                <label htmlFor="report-conference">Conference</label>
-                <select id="report-conference" value={conferenceId} onChange={(event) => setConferenceId(event.target.value)}>
-                  {conferences.map((conference) => <option key={conference.$id} value={conference.$id}>{conference.title}</option>)}
-                </select>
-              </>
-            ) : null}
-            <div className="rec-report-actions">
-              <button type="submit" disabled={busy}>{conferences.length ? "Send code" : "Continue"}</button>
-            </div>
-          </form>
-          {otpId ? (
-            <form onSubmit={verify}>
-              <label htmlFor="report-code">Access code</label>
-              <input id="report-code" inputMode="numeric" value={code} onChange={(event) => setCode(event.target.value)} required />
-              {devCode ? <p className="quiet">Development code: {devCode}</p> : null}
-              <div className="rec-report-actions"><button className="gold" type="submit" disabled={busy}>Open sessions</button></div>
-            </form>
-          ) : null}
-        </section>
-      ) : null}
       {report && content ? (
         <div className="rec-desk-write">
         <article className="rec-desk-editor">
@@ -465,6 +532,7 @@ export default function ReportingPage() {
           <div className="rec-report-actions">
             <span className="quiet">{saved}</span>
             <button type="button" className="plain" onClick={() => downloadRapporteurReport({ ...report, content })}>Download</button>
+            {editable && !reportContentReady(content) ? <span className="rec-report-need">Write the Purpose of the Session to send this report.</span> : null}
             {editable ? <button type="button" className="gold" disabled={busy || !reportContentReady(content)} onClick={submitReport}>Send to approver</button> : null}
           </div>
         </article>

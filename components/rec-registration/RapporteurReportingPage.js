@@ -342,7 +342,7 @@ export default function ReportingPage() {
       <main className="rec-report-page rec-rap-auth" data-site-motion="off">
         <div className="rec-rap-auth-card">
           <div className="rec-rap-auth-brand">
-            <img src="/NREP.png" alt="NREP" width="44" height="44" />
+            <img src="/nrep-logo.png" alt="NREP" width="44" height="44" />
             <span>
               <small>REC26 &amp; Expo</small>
               <strong>Rapporteur</strong>
@@ -419,7 +419,7 @@ export default function ReportingPage() {
     <main className={onDesk ? "rec-report-page has-side" : "rec-report-page"} data-site-motion="off">
       {onDesk ? (
         <aside className="rec-side">
-          <img className="rec-side-logo" src="/NREP.png" alt="NREP" width="72" height="72" />
+          <img className="rec-side-logo" src="/nrep-logo.png" alt="NREP" width="72" height="72" />
           <Link href="/" className="rec-desk-brand">
             <span>
               <small>REC26 &amp; Expo</small>

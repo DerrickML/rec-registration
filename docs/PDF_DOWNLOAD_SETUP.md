@@ -15,31 +15,20 @@ The conference program PDF download feature allows users to download a professio
 
 ## Setup Instructions
 
-### 1. Add Logo Images
+### 1. Configure Logo Images
 
 To display the MEMD and NREP logos in the PDF header:
 
-1. Save your logo images to the `public` folder:
-   - MEMD logo: `public/memd-logo.png`
-   - NREP logo: `public/nrep-logo.png`
-
-2. Update the logo configuration in `lib/logo-utils.js`:
-   ```javascript
-   export const LOGO_CONFIG = {
-     memd: {
-       path: "/memd-logo.png",
-       width: 20,  // Adjust width in mm
-       height: 20, // Adjust height in mm
-     },
-     nrep: {
-       path: "/nrep-logo.png",
-       width: 20,  // Adjust width in mm
-       height: 20, // Adjust height in mm
-     },
-   }
+1. Set the NREP logo URL in the public REC application's `.env.local` or deployment environment:
+   ```env
+   NEXT_PUBLIC_NREP_LOGO_URL=https://appwrite.nrep.ug/v1/storage/buckets/67e0415e002bfc51380a/files/nrep_logo_v2/view?project=66bcc8450005201fa1af
    ```
 
-3. Adjust the `width` and `height` values to match your logo dimensions (in millimeters)
+2. Keep the MEMD logo at `public/MEMD.png`. When the NREP environment variable is missing or blank, the PDF uses `public/NREP.png`.
+
+3. Restart the development server after changing the environment value. For production, rebuild and redeploy because `NEXT_PUBLIC_` values are included in the browser bundle at build time.
+
+The configured image must be publicly accessible and allow browser fetches from the REC website. Both logos are fitted proportionally within the PDF header.
 
 **Note**: If logos are not found, the PDF will display "MEMD | NREP" as text in the header.
 

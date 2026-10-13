@@ -24,11 +24,11 @@ To display the MEMD and NREP logos in the PDF header:
    NEXT_PUBLIC_NREP_LOGO_URL=https://appwrite.nrep.ug/v1/storage/buckets/67e0415e002bfc51380a/files/nrep_logo_v2/view?project=66bcc8450005201fa1af
    ```
 
-2. Keep the MEMD logo at `public/MEMD.png`. When the NREP environment variable is missing or blank, the PDF uses `public/NREP.png`.
+2. Keep the MEMD logo at `public/MEMD.png`. When the NREP environment variable is missing, blank, or its image cannot be loaded, the PDF uses `public/nrep-logo.png`.
 
 3. Restart the development server after changing the environment value. For production, rebuild and redeploy because `NEXT_PUBLIC_` values are included in the browser bundle at build time.
 
-The configured image must be publicly accessible and allow browser fetches from the REC website. Both logos are fitted proportionally within the PDF header.
+The configured image must be publicly accessible over HTTPS. The PDF fetches it through the same-origin `/api/program/logo` endpoint, so Appwrite browser CORS settings do not prevent it appearing. The endpoint accepts PNG, JPEG and WebP images up to 2 MB, rejects redirects, and does not accept a source URL from the browser. Both logos are fitted proportionally within the PDF header.
 
 **Note**: If logos are not found, the PDF will display "MEMD | NREP" as text in the header.
 

@@ -23,34 +23,45 @@ describe("program PDF logos", () => {
     vi.restoreAllMocks()
   })
 
-  it("loads the NREP logo from the trimmed public environment URL", async () => {
-    const url = "https://example.org/brand/nrep.png?project=rec"
-    vi.stubEnv("NEXT_PUBLIC_NREP_LOGO_URL", ` ${url} `)
+  it("loads the configured NREP logo through the same-origin endpoint", async () => {
     const { LOGO_CONFIG, loadLogos } = await import("../lib/logo-utils")
 
-    expect(LOGO_CONFIG.nrep.path).toBe(url)
+    expect(LOGO_CONFIG.nrep.path).toBe("/api/program/logo")
     expect(await loadLogos()).toEqual({ memd: logoData, nrep: logoData })
-    expect(fetch.mock.calls.map(([path]) => path)).toEqual(["/MEMD.png", url])
+    expect(fetch.mock.calls.map(([path]) => path)).toEqual(["/MEMD.png", "/api/program/logo"])
   })
 
-  it.each([undefined, "", "   "])("uses the bundled NREP logo when the variable is %s", async value => {
-    vi.stubEnv("NEXT_PUBLIC_NREP_LOGO_URL", value)
-    const { LOGO_CONFIG, loadLogos } = await import("../lib/logo-utils")
-
-    expect(LOGO_CONFIG.nrep.path).toBe("/NREP.png")
-    await loadLogos()
-    expect(fetch).toHaveBeenLastCalledWith("/NREP.png")
-  })
-
-  it("does not embed an HTTP error response as an image or discard the MEMD logo", async () => {
-    vi.stubEnv("NEXT_PUBLIC_NREP_LOGO_URL", "https://example.org/unavailable.png")
+  it("uses the bundled NREP image if the configured image is unavailable", async () => {
     const errorBlob = vi.fn()
     fetch.mockResolvedValueOnce({ ok: true, blob: vi.fn().mockResolvedValue(new Blob()) })
       .mockResolvedValueOnce({ ok: false, blob: errorBlob })
     vi.spyOn(console, "error").mockImplementation(() => {})
     const { loadLogos } = await import("../lib/logo-utils")
 
-    expect(await loadLogos()).toEqual({ memd: logoData, nrep: null })
+    expect(await loadLogos()).toEqual({ memd: logoData, nrep: logoData })
+    expect(fetch).toHaveBeenLastCalledWith("/nrep-logo.png")
     expect(errorBlob).not.toHaveBeenCalled()
+  })
+
+  it("falls back after a network error", async () => {
+    fetch.mockImplementation(async path => {
+      if (path === "/api/program/logo") throw new TypeError("Failed to fetch")
+      return { ok: true, blob: async () => new Blob() }
+    })
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    const { loadLogos } = await import("../lib/logo-utils")
+
+    expect(await loadLogos()).toEqual({ memd: logoData, nrep: logoData })
+    expect(fetch).toHaveBeenLastCalledWith("/nrep-logo.png")
+  })
+
+  it("handles FileReader errors so a broken logo cannot stop PDF generation", async () => {
+    vi.stubGlobal("FileReader", class {
+      readAsDataURL() { this.onerror(new Error("Failed to read image")) }
+    })
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    const { loadLogos } = await import("../lib/logo-utils")
+
+    expect(await loadLogos()).toEqual({ memd: null, nrep: null })
   })
 })

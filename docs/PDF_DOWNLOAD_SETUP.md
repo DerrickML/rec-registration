@@ -12,6 +12,7 @@ The conference program PDF download feature allows users to download a professio
 - **Multi-day Support**: Automatically organizes sessions by day
 - **Custom Exports**: Select days, halls and time blocks, with optional non-session activities
 - **Timezone Display**: Shows times in East Africa Time (EAT)
+- **Actual Session Times**: Each session shows its own start/end range, distinct from the containing period. Sessions are ordered by start time, end time, hall and title in the website, embed and PDF.
 - **HTML Content Stripping**: Safely converts HTML content from sessions to plain text
 
 ## Setup Instructions
@@ -78,6 +79,7 @@ app/program/
 - Days, halls and time blocks are combined. Time-block choices update as days, halls and activity inclusion change.
 - Conference-wide activities remain eligible for selected halls; venue-specific activities are included only when their venue scope overlaps the selected halls.
 - Sessions spanning several selected blocks show full details at their first exported occurrence and continuation markers thereafter. Actual session times are not changed.
+- Full-day and continuing sessions keep their original time range. Missing, invalid or non-positive ranges show "Time to be confirmed" and sort after sessions with valid times. Legacy sessions are grouped safely even when times are missing.
 - Legacy sessions without matching blocks remain available when all eligible blocks are selected, but are excluded from an explicitly restricted time-block export.
 - Empty exports are blocked. Custom PDFs show the selected scope, use the original day numbers and dates, and include only exported days in counts, indexes and bookmarks.
 - Custom filenames have a `_Selected_Days_` suffix. Neither viewing filters nor export selections modify published conference data.

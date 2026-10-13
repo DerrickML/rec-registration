@@ -14,6 +14,7 @@ import {
 import SessionCard from "./session-card"
 import {
   formatBlockTimeRange,
+  formatSessionTimeRange,
   formatVenueScope,
   getBlockTypeLabel,
   isSessionAllowedBlock,
@@ -46,8 +47,8 @@ export default function TimeSlotAccordion({
   const endTimes = block ? null : formatTimeWithTimezone(timeSlotData.toTime)
   const displayedTimeRange = block
     ? blockTimeRange || "Time to be confirmed"
-    : `${startTimes.kampala} - ${endTimes.kampala}`
-  const showBothTimezones = !block && startTimes.kampala !== startTimes.local
+    : formatSessionTimeRange(timeSlotData, { includeTimezone: false })
+  const showBothTimezones = !block && Boolean(startTimes.kampala && endTimes.kampala) && startTimes.kampala !== startTimes.local
   const sessionEntries =
     timeSlotData.sessionEntries ||
     timeSlotData.sessions.map((session) => ({ session, isContinuation: false }))

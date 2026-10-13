@@ -7,12 +7,13 @@ import {
   Building,
   ChevronRight,
   ChevronUp,
+  Clock,
   Layers,
   MapPin,
   Users,
 } from "lucide-react"
 import { sanitizeRichHtml } from "@/lib/sanitize-html"
-import { getSessionSpanLabel } from "@/lib/schedule-utils"
+import { formatSessionTimeRange, getSessionSpanLabel } from "@/lib/schedule-utils"
 
 export default function SessionCard({
   session,
@@ -40,6 +41,10 @@ export default function SessionCard({
         >
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-3 flex-wrap">
+              <Badge className="rounded-md border border-[#176F91] bg-[#176F91] px-3 py-1 font-semibold text-white hover:bg-[#0B5E78]">
+                <Clock className="mr-1 h-3 w-3 shrink-0" aria-hidden="true" />
+                {formatSessionTimeRange(session)}
+              </Badge>
               <Badge className="rounded-md border border-[#176F91]/20 bg-[#176F91]/10 px-3 py-1 font-medium text-[#176F91]">
                 <MapPin className="w-3 h-3 mr-1 inline" />
                 {session.venueHall}

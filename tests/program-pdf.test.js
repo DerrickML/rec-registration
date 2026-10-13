@@ -117,4 +117,23 @@ describe("program PDF rich text", () => {
     expect(doc.outline.root.children.map(item => item.title)).toEqual(["Day 1 - 19 October 2026", "Day 2 - 20 October 2026"])
     expect(doc.output("arraybuffer").byteLength).toBeGreaterThan(10000)
   })
+
+  it("indexes only exported days and preserves their original day numbers and dates", () => {
+    const doc = createProgramDocument(
+      { title: "REC 2026", startDate: "2026-10-18T21:00:00Z", endDate: "2026-10-21T21:00:00Z" },
+      { daysCount: 4, venueHalls: ["Main Hall"] },
+      [1, 2, 3, 4].map(day => ({ day, title: "Day " + day + " session", venueHall: "Main Hall" })),
+      [],
+      { fonts, documentObject, exportSelection: { mode: "custom", days: [2, 4], halls: ["Main Hall"] } },
+    )
+    expect(doc.getNumberOfPages()).toBe(3)
+    expect(doc.outline.root.children.map(item => item.title)).toEqual(["Day 2 - 20 October 2026", "Day 4 - 22 October 2026"])
+  })
+
+  it("refuses to generate a PDF for an empty custom selection", () => {
+    expect(() => createProgramDocument(
+      { title: "REC 2026" }, { daysCount: 1 }, [{ day: 1, venueHall: "Main Hall" }], [],
+      { fonts, documentObject, exportSelection: { mode: "custom", days: [] } },
+    )).toThrow("Select at least one conference day.")
+  })
 })

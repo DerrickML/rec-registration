@@ -10,6 +10,7 @@ The conference program PDF download feature allows users to download a professio
 - **Organization Logo Support**: MEMD and NREP logos in header
 - **Complete Session Details**: All sessions with times, speakers, venues, and descriptions
 - **Multi-day Support**: Automatically organizes sessions by day
+- **Custom Exports**: Select days, halls and time blocks, with optional non-session activities
 - **Timezone Display**: Shows times in East Africa Time (EAT)
 - **HTML Content Stripping**: Safely converts HTML content from sessions to plain text
 
@@ -63,7 +64,7 @@ app/program/
 
 ## How It Works
 
-1. **User clicks "Download Program" button**
+1. **User clicks "Download Program" button** and chooses Complete program (default) or Custom selection. The same dialog is available on `/program` and `/program/download`.
 2. **Logo loading**: Fetches logo images and converts to base64
 3. **PDF creation**: Generates PDF with:
    - Cover page with conference details
@@ -71,6 +72,15 @@ app/program/
    - Sessions grouped by time slots
    - Professional formatting and branding
 4. **Download**: Automatically downloads PDF to user's device
+
+### Export Selection Rules
+
+- Days, halls and time blocks are combined. Time-block choices update as days, halls and activity inclusion change.
+- Conference-wide activities remain eligible for selected halls; venue-specific activities are included only when their venue scope overlaps the selected halls.
+- Sessions spanning several selected blocks show full details at their first exported occurrence and continuation markers thereafter. Actual session times are not changed.
+- Legacy sessions without matching blocks remain available when all eligible blocks are selected, but are excluded from an explicitly restricted time-block export.
+- Empty exports are blocked. Custom PDFs show the selected scope, use the original day numbers and dates, and include only exported days in counts, indexes and bookmarks.
+- Custom filenames have a `_Selected_Days_` suffix. Neither viewing filters nor export selections modify published conference data.
 
 ## Customization
 

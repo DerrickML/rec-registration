@@ -32,6 +32,7 @@ import {
 } from "lucide-react"
 import { apiService } from "../../lib/api-service"
 import { conferenceDays as configuredConferenceDays } from "@/lib/conference-display"
+import { conferenceRegistrationNotice } from "@/lib/registration-notice.mjs"
 import { countries } from "../../data/countries"
 import ConfirmationScreen from "./confirmation-screen"
 import { PageLoadingState } from "@/components/layout/public-page-state"
@@ -762,15 +763,16 @@ export default function RegistrationForm() {
 
   // Registration closed screen
   if (registrationClosed) {
+    const notice = conferenceRegistrationNotice(conference)
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="max-w-md w-full text-center">
           <div className="w-16 h-16 rounded-lg bg-red-700 flex items-center justify-center mx-auto mb-6">
             <AlertCircle className="w-8 h-8 text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-3">Registration Closed</h2>
-          <p className="text-gray-500 mb-8">
-            {conference?.regClosedMessage || "The registration period has ended and we are no longer accepting new registrations at this time."}
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">{notice.title}</h2>
+          <p className="text-gray-700 mb-8">
+            {conference ? notice.message : error || notice.message}
           </p>
           
           <div className="space-y-4">

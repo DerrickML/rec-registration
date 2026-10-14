@@ -5,6 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, ArrowUpRight } from "lucide-react"
 import { apiService } from "@/lib/api-service"
+import { conferenceRegistrationNotice } from "@/lib/registration-notice.mjs"
 import {
   REC_PHOTOS,
   conferenceDays,
@@ -62,6 +63,7 @@ export default function HomePage() {
     )
 
   const days = conferenceDays(conference.days)
+  const registrationNotice = conferenceRegistrationNotice(conference)
   const extras = conferenceExtras(conference.socialsJson)
   const features =
     Array.isArray(extras.features) && extras.features.length
@@ -130,8 +132,8 @@ export default function HomePage() {
             </div>
             {!conference.registrationOpen && (
               <p className="hero-closed">
-                {conference.regClosedMessage ||
-                  "Registration is currently closed."}
+                <strong>{registrationNotice.title}.</strong>{" "}
+                {registrationNotice.message}
               </p>
             )}
           </div>

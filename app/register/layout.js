@@ -3,14 +3,14 @@ import {
   getActiveConferenceForSeo,
   getConferenceTitle,
 } from "@/lib/seo"
+import { conferenceRegistrationNotice } from "@/lib/registration-notice.mjs"
 
 export async function generateMetadata() {
   const conference = await getActiveConferenceForSeo()
   const title = `Register for ${conference?.shortName || getConferenceTitle(conference)}`
   const description = conference?.registrationOpen
     ? "Register for the Renewable Energy Conference & Expo as an attendee, exhibitor, or participant."
-    : conference?.regClosedMessage ||
-      "Registration information for the Renewable Energy Conference & Expo."
+    : conferenceRegistrationNotice(conference).message
 
   return createRouteMetadata({
     title,

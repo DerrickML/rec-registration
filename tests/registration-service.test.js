@@ -195,6 +195,17 @@ describe("registration service", () => {
     await expect(service(db).start({ email: "a@example.com" })).rejects.toMatchObject({ status: 403 })
   })
 
+  it.each([
+    [{ regClosedMessage: "Registration opening soon" }, "Registration is currently closed."],
+    [{ socialsJson: JSON.stringify({ registrationNotice: { state: "not_yet_open", openingMessage: "Registration opens in November." } }) }, "Registration opens in November."],
+    [{ regClosedMessage: "Registration closed: capacity reached." }, "Registration closed: capacity reached."],
+  ])("rejects registration using the same configured public notice", async (settings, message) => {
+    const db = createDb({ conferences: [activeConference({ registrationOpen: false, ...settings })] })
+    const svc = service(db)
+    await expect(svc.start({ email: "a@example.com" })).rejects.toThrow(message)
+    expect(db.tables.registrants).toHaveLength(0)
+  })
+
   it("requires OTP for new emails before registration can continue", async () => {
     const mailer = { sendOtp: vi.fn().mockResolvedValue(true) }
     const db = createDb({

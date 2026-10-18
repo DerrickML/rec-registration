@@ -9,6 +9,7 @@ const nextConfig = {
       { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
       { key: "Cache-Control", value: "private, no-store, max-age=0" },
       { key: "X-Content-Type-Options", value: "nosniff" },
+      ...(source === "/scanner" ? [{ key: "Permissions-Policy", value: "serial=(self)" }] : []),
     ] }))
   },
 }

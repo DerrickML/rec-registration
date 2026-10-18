@@ -1,14 +1,21 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import jsQR from "jsqr"
 import * as Dialog from "@radix-ui/react-dialog"
-import { BadgeCheck, Camera, CheckCircle2, CircleAlert, LogOut, Mail, QrCode, RefreshCcw, ShieldCheck, Smartphone, XCircle } from "lucide-react"
+import { BadgeCheck, Camera, CheckCircle2, CircleAlert, Keyboard, LogOut, Mail, PauseCircle, Plug, QrCode, RefreshCcw, ScanLine, ShieldCheck, Smartphone, Unplug, Usb, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { createSerialScanner, SERIAL_BAUD_RATES, SERIAL_DEFAULT_OPTIONS } from "@/lib/scanner-serial"
 
 const sessionStorageKey = "nrep.rec.public.scanner.session"
 const deviceStorageKey = "nrep.rec.public.scanner.device"
+const scanModes = [
+  { value: "camera", label: "Camera", icon: Camera },
+  { value: "external", label: "External Scanner", icon: ScanLine },
+  { value: "serial", label: "USB Serial", icon: Usb },
+  { value: "manual", label: "Manual Entry", icon: Keyboard },
+]
 
 function getDeviceId() {
   if (typeof window === "undefined") return ""
@@ -106,6 +113,14 @@ export default function PublicScannerPage() {
   const submittingRef = useRef(false)
   const requestRef = useRef(null)
   const cameraGeneration = useRef(0)
+  const externalInputRef = useRef(null)
+  const manualInputRef = useRef(null)
+  const resultDialogRef = useRef(null)
+  const readyInputButtonRef = useRef(null)
+  const pendingReviewButtonRef = useRef(null)
+  const serialControllerRef = useRef(null)
+  const serialSubmitRef = useRef(null)
+  const serialReadyButtonRef = useRef(null)
 
   const [email, setEmail] = useState("")
   const [conferences, setConferences] = useState([])
@@ -116,12 +131,23 @@ export default function PublicScannerPage() {
   const [events, setEvents] = useState([])
   const [eventId, setEventId] = useState("")
   const [manualPayload, setManualPayload] = useState("")
+  const [scanMode, setScanMode] = useState("camera")
+  const [externalPayload, setExternalPayload] = useState("")
+  const [externalArmed, setExternalArmed] = useState(false)
+  const [externalFocused, setExternalFocused] = useState(false)
+  const [online, setOnline] = useState(true)
+  const [pageVisible, setPageVisible] = useState(true)
+  const [pendingScan, setPendingScan] = useState(null)
   const [result, setResult] = useState(null)
   const [cameraActive, setCameraActive] = useState(false)
   const [cameraError, setCameraError] = useState("")
   const [loading, setLoading] = useState("")
   const [error, setError] = useState("")
   const [devLogin, setDevLogin] = useState(false)
+  const [serialSupported, setSerialSupported] = useState(false)
+  const [serialState, setSerialState] = useState("disconnected")
+  const [serialError, setSerialError] = useState("")
+  const [serialOptions, setSerialOptions] = useState(SERIAL_DEFAULT_OPTIONS)
 
   const activeEvent = useMemo(
     () => events.find((event) => event.$id === eventId) || null,
@@ -132,9 +158,40 @@ export default function PublicScannerPage() {
     activeEvent.isCurrentlyOpen !== false &&
     !["event_not_started", "event_ended"].includes(activeEvent.availabilityCode)
   )
+  const scanBlocked = Boolean(loading || result || pendingScan || !online || !pageVisible || !canScanSelectedEvent)
+  const serialConnected = ["connected", "arming", "ready"].includes(serialState)
+  const pauseSerial = useCallback(() => serialControllerRef.current?.pause(), [])
+
+  useEffect(() => {
+    const available = Boolean(window.isSecureContext && navigator.serial?.requestPort)
+    setSerialState("disconnected")
+    setSerialSupported(available)
+    if (!available) return
+    const controller = createSerialScanner({
+      serial: navigator.serial,
+      onState: setSerialState,
+      onError: setSerialError,
+      onScan: (payload) => serialSubmitRef.current?.(payload),
+    })
+    serialControllerRef.current = controller
+    return () => {
+      serialControllerRef.current = null
+      void controller.dispose()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!session) void serialControllerRef.current?.disconnect()
+  }, [session])
 
   const loadEvents = useCallback(async () => {
-    const data = await fetchScannerJson("/api/scanner/events")
+    let data
+    try {
+      data = await fetchScannerJson("/api/scanner/events")
+    } catch (err) {
+      if (err.status === 401) setSession(null)
+      throw err
+    }
     const rows = data.documents || []
     setEvents(rows)
     setEventId((current) => rows.some((row) => row.$id === current) ? current : rows.find((row) => row.isCurrentlyOpen)?.$id || rows[0]?.$id || "")
@@ -231,34 +288,61 @@ export default function PublicScannerPage() {
     }
   }
 
-  const submitScan = useCallback(async (payload) => {
-    if (!session || !eventId || !payload || submittingRef.current) return
-    if (!canScanSelectedEvent) {
+  const submitScan = useCallback(async (payload, { retry = false } = {}) => {
+    if (!session || submittingRef.current) return
+    if (retry && !requestRef.current) return
+    if (!retry && (result || pendingScan || !online || !pageVisible || document.hidden)) return
+    const value = String(payload || "").trim()
+    if (!retry && (!eventId || !value)) return
+    pauseSerial()
+    if (!retry && (value.length > 4096 || /[\u0000-\u001f\u007f]/.test(value))) {
+      setExternalArmed(false)
+      setExternalPayload("")
+      setError("The scanned value is incomplete or contains unsupported characters. Check the scanner settings and try again.")
+      return
+    }
+    if (!retry && !canScanSelectedEvent) {
+      setExternalArmed(false)
       setResult({ status: "rejected", reason: "event_closed", error: activeEvent?.availabilityMessage || "This scan event is not open right now." })
       return
     }
     submittingRef.current = true
+    setExternalArmed(false)
+    setExternalPayload("")
     stopCamera()
     setLoading("scan")
     setError("")
     setResult(null)
-    if (!requestRef.current || requestRef.current.payload !== payload || requestRef.current.eventId !== eventId) requestRef.current = { payload, eventId, nonce: crypto.randomUUID() }
+    let timeout
     try {
-      const data = await fetchScannerJson("/api/scanner/scans", {
-        method: "POST",
-        body: JSON.stringify({
+      // Retries must keep the original event, credential, device and idempotency key.
+      if (!retry) requestRef.current = {
+        event: activeEvent,
+        body: {
           eventId,
-          qrPayload: payload,
-          clientNonce: requestRef.current.nonce,
+          qrPayload: value,
+          clientNonce: crypto.randomUUID(),
           deviceId: getDeviceId(),
           deviceLabel: navigator.userAgent || "Scanner device",
-        }),
+        },
+      }
+      const controller = new AbortController()
+      timeout = window.setTimeout(() => controller.abort(), 30000)
+      const data = await fetchScannerJson("/api/scanner/scans", {
+        method: "POST",
+        body: JSON.stringify(requestRef.current.body),
+        signal: controller.signal,
       })
-      setResult(data)
+      if (!["accepted", "duplicate", "rejected"].includes(data.status)) throw new Error("Missing scan confirmation")
+      setResult({ ...data, event: data.event || requestRef.current.event })
       requestRef.current = null
+      setPendingScan(null)
       setManualPayload("")
     } catch (err) {
       if (err.status === 401) {
+        void serialControllerRef.current?.disconnect()
+        requestRef.current = null
+        setPendingScan(null)
         window.localStorage.removeItem(sessionStorageKey)
         setSession(null)
         setEvents([])
@@ -267,21 +351,36 @@ export default function PublicScannerPage() {
         setError(`${err.message || "Scanner access is no longer active."} Sign in again.`)
         return
       }
-      setResult({
-        status: !err.status || err.status >= 500 ? "unconfirmed" : "rejected",
-        event: activeEvent,
+      const unconfirmed = Boolean(requestRef.current && (!err.status || err.status >= 500 || err.status === 408))
+      const nextResult = {
+        status: unconfirmed ? "unconfirmed" : "rejected",
+        event: requestRef.current?.event || activeEvent,
         reason: err.code || "scan_failed",
-        error: !err.status || err.status >= 500 ? "The server did not confirm this scan. Retry this request without recording it twice." : err.message || "Scan failed",
+        error: unconfirmed ? "The server did not confirm this scan. Retry this request without recording it twice." : err.message || "Scan failed",
         details: err.details || {},
-      })
+      }
+      setResult(nextResult)
+      setPendingScan(unconfirmed ? nextResult : null)
+      if (!unconfirmed) requestRef.current = null
     } finally {
+      window.clearTimeout(timeout)
       submittingRef.current = false
       stopCamera()
       setLoading("")
     }
-  }, [activeEvent, canScanSelectedEvent, eventId, session, stopCamera])
+  }, [activeEvent, canScanSelectedEvent, eventId, online, pageVisible, pauseSerial, pendingScan, result, session, stopCamera])
+
+  // Update the device gate before paint, so serial frames cannot use an old event/session.
+  useLayoutEffect(() => {
+    serialSubmitRef.current = (payload) => {
+      if (scanMode !== "serial" || !session || scanBlocked || document.hidden || navigator.onLine === false) return
+      void submitScan(payload)
+    }
+    if (scanMode !== "serial" || !session || scanBlocked) pauseSerial()
+  }, [pauseSerial, scanBlocked, scanMode, session, submitScan])
 
   const startCamera = async () => {
+    if (submittingRef.current || pendingScan || !online || document.hidden) return
     setCameraError("")
     setResult(null)
     if (!canScanSelectedEvent) {
@@ -354,7 +453,107 @@ export default function PublicScannerPage() {
     }
   }
 
-  useEffect(() => { stopCamera() }, [eventId, stopCamera])
+  useEffect(() => {
+    stopCamera()
+    pauseSerial()
+    setExternalArmed(false)
+    setExternalPayload("")
+    setManualPayload("")
+  }, [eventId, pauseSerial, stopCamera])
+
+  useEffect(() => {
+    if (!canScanSelectedEvent) {
+      stopCamera()
+      setExternalArmed(false)
+      setExternalPayload("")
+    }
+  }, [canScanSelectedEvent, stopCamera])
+
+  useEffect(() => {
+    const updateAvailability = () => {
+      setOnline(navigator.onLine !== false)
+      setPageVisible(!document.hidden)
+      if (document.hidden || navigator.onLine === false) {
+        stopCamera()
+        pauseSerial()
+        setExternalArmed(false)
+        setExternalPayload("")
+      }
+    }
+    updateAvailability()
+    const pauseInput = () => {
+      stopCamera()
+      pauseSerial()
+      setExternalArmed(false)
+      setExternalPayload("")
+    }
+    window.addEventListener("online", updateAvailability)
+    window.addEventListener("offline", updateAvailability)
+    window.addEventListener("blur", pauseInput)
+    document.addEventListener("visibilitychange", updateAvailability)
+    return () => {
+      window.removeEventListener("online", updateAvailability)
+      window.removeEventListener("offline", updateAvailability)
+      window.removeEventListener("blur", pauseInput)
+      document.removeEventListener("visibilitychange", updateAvailability)
+    }
+  }, [pauseSerial, stopCamera])
+
+  useEffect(() => {
+    if (session && scanMode === "external" && externalArmed && !scanBlocked) externalInputRef.current?.focus()
+  }, [externalArmed, scanBlocked, scanMode, session])
+
+  useEffect(() => {
+    if (!pendingScan) return
+    const warnBeforeLeaving = (event) => {
+      event.preventDefault()
+      event.returnValue = ""
+    }
+    window.addEventListener("beforeunload", warnBeforeLeaving)
+    return () => window.removeEventListener("beforeunload", warnBeforeLeaving)
+  }, [pendingScan])
+
+  const changeScanMode = (value) => {
+    if (loading === "scan" || pendingScan) return
+    stopCamera()
+    pauseSerial()
+    if (value !== "serial") void serialControllerRef.current?.disconnect()
+    setScanMode(value)
+    setResult(null)
+    setManualPayload("")
+    setExternalPayload("")
+    setExternalArmed(value === "external" && online && pageVisible && canScanSelectedEvent)
+    setCameraError("")
+    setError("")
+  }
+
+  const scanAnother = () => {
+    if (pendingScan || loading === "scan") return
+    setResult(null)
+    setManualPayload("")
+    setExternalPayload("")
+    lastPayloadRef.current = ""
+    if (scanMode === "camera") startCamera()
+    else if (scanMode === "external") setExternalArmed(true)
+    else if (scanMode === "serial") {
+      if (serialConnected && online && pageVisible && canScanSelectedEvent) serialControllerRef.current?.arm()
+      window.setTimeout(() => serialReadyButtonRef.current?.focus(), 0)
+    }
+    else window.setTimeout(() => manualInputRef.current?.focus(), 0)
+  }
+
+  const closeResult = () => {
+    pauseSerial()
+    setExternalArmed(false)
+    setExternalPayload("")
+    setResult(null)
+    window.setTimeout(() => {
+      if (pendingScan) pendingReviewButtonRef.current?.focus()
+      else if (scanMode === "external") readyInputButtonRef.current?.focus()
+      else if (scanMode === "serial") serialReadyButtonRef.current?.focus()
+      else if (scanMode === "manual") manualInputRef.current?.focus()
+    }, 0)
+  }
 
   useEffect(() => {
     if (!session) return
@@ -377,12 +576,22 @@ export default function PublicScannerPage() {
   }
 
   const logout = async () => {
+    if (submittingRef.current) return
+    if (pendingScan && !window.confirm("This scan has not been confirmed. Signing out loses its retry request. Check attendance with an administrator before scanning this badge again. Sign out anyway?")) return
+    pauseSerial()
+    void serialControllerRef.current?.disconnect()
     if (session) {
       await fetchScannerJson("/api/scanner/auth/logout", {
         method: "POST",
       }).catch(() => {})
     }
     stopCamera()
+    setExternalArmed(false)
+    setExternalPayload("")
+    setManualPayload("")
+    setResult(null)
+    setPendingScan(null)
+    requestRef.current = null
     window.localStorage.removeItem(sessionStorageKey)
     setSession(null)
     setEvents([])
@@ -396,7 +605,12 @@ export default function PublicScannerPage() {
       <section className="mx-auto grid w-full min-w-0 max-w-5xl gap-4 sm:gap-5">
         <header className="flex flex-col gap-4 py-4 text-white sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <Link href="/" className="mb-3 inline-flex items-center gap-2 text-sm font-bold text-white/75 hover:text-white">
+            <Link href="/" onClick={(event) => {
+              if (loading === "scan" || pendingScan) {
+                event.preventDefault()
+                setError("Resolve the pending scan before leaving this page.")
+              }
+            }} className="mb-3 inline-flex items-center gap-2 text-sm font-bold text-white/75 hover:text-white">
               <BadgeCheck className="h-4 w-4 text-[#EFA74F]" />
               REC & Expo
             </Link>
@@ -406,7 +620,7 @@ export default function PublicScannerPage() {
             </p>
           </div>
           {session && (
-            <Button variant="outline" className="h-10 w-full rounded-lg border-white/25 bg-white/10 text-white hover:bg-white/15 sm:w-auto" onClick={logout}>
+            <Button variant="outline" className="h-10 w-full rounded-lg border-white/25 bg-white/10 text-white hover:bg-white/15 sm:w-auto" onClick={logout} disabled={loading === "scan"}>
               <LogOut className="mr-2 h-4 w-4" />
               Sign out
             </Button>
@@ -414,7 +628,7 @@ export default function PublicScannerPage() {
         </header>
 
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
             {error}
           </div>
         )}
@@ -513,9 +727,11 @@ export default function PublicScannerPage() {
                 Scan Event
                 <select
                   value={eventId}
-                  disabled={loading === "scan"}
+                  disabled={loading === "scan" || Boolean(pendingScan)}
                   onChange={(event) => {
                     stopCamera()
+                    pauseSerial()
+                    setExternalArmed(false)
                     setEventId(event.target.value)
                     setResult(null)
                   }}
@@ -540,65 +756,216 @@ export default function PublicScannerPage() {
               </div>
             )}
 
-            <div className="min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-950">
-              <video ref={videoRef} className={`${cameraActive ? "block" : "hidden"} min-h-[320px] w-full object-cover`} muted playsInline />
-              {!cameraActive && (
-                <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 p-8 text-center text-white/75">
-                  <QrCode className="h-12 w-12" />
-                  <p className="text-sm font-bold">Camera is off</p>
-                </div>
-              )}
-            </div>
-
-            {cameraError && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
-                {cameraError}
+            {!online && (
+              <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800">
+                Offline. Scanning is paused until your internet connection returns.
               </div>
             )}
 
-            <div className="flex flex-col gap-2 sm:flex-row">
-              {!cameraActive ? (
-                <Button className="h-11 w-full rounded-lg bg-[#176F91] font-bold text-white hover:bg-[#0B5E78] sm:w-auto" onClick={startCamera} disabled={Boolean(loading) || !eventId || !canScanSelectedEvent}>
-                  <Camera className="mr-2 h-4 w-4" />
-                  Start Camera
-                </Button>
-              ) : (
-                <Button variant="outline" className="h-11 w-full rounded-lg font-bold sm:w-auto" onClick={stopCamera}>
-                  Stop Camera
-                </Button>
-              )}
-              <Button variant="outline" className="h-11 w-full rounded-lg font-bold sm:w-auto" onClick={() => loadEvents().catch((e) => setError(e.message))}>
-                <RefreshCcw className="mr-2 h-4 w-4" />
-                Refresh Events
-              </Button>
+            {pendingScan && !result && (
+              <div role="alert" className="flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between">
+                <strong>A scan is awaiting confirmation. New scans are paused.</strong>
+                <Button ref={pendingReviewButtonRef} type="button" variant="outline" onClick={() => setResult(pendingScan)} disabled={loading === "scan"}>Review pending scan</Button>
+              </div>
+            )}
+
+            <div role="group" aria-label="Scan input method" className="grid min-w-0 grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1 sm:grid-cols-4">
+              {scanModes.map(({ value, label, icon: Icon }) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={scanMode === value}
+                  disabled={loading === "scan" || Boolean(pendingScan)}
+                  onClick={() => changeScanMode(value)}
+                  className={`flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-md px-2 py-2 text-center text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#176F91] disabled:cursor-not-allowed disabled:opacity-60 sm:flex-row sm:gap-2 sm:text-sm ${scanMode === value ? "bg-white text-[#0B5E78] shadow-sm" : "text-slate-600 hover:bg-white/70"}`}
+                >
+                  <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>{label}</span>
+                </button>
+              ))}
             </div>
 
-            <form
-              className="grid min-w-0 gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+            {scanMode === "camera" && (
+              <>
+                <div className="min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-950">
+                  <video ref={videoRef} className={`${cameraActive ? "block" : "hidden"} min-h-[320px] w-full object-cover`} muted playsInline />
+                  {!cameraActive && (
+                    <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 p-8 text-center text-white/75">
+                      <QrCode className="h-12 w-12" />
+                      <p className="text-sm font-bold">Camera is off</p>
+                    </div>
+                  )}
+                </div>
+
+                {cameraError && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+                    {cameraError}
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  {!cameraActive ? (
+                    <Button className="h-11 w-full rounded-lg bg-[#176F91] font-bold text-white hover:bg-[#0B5E78] sm:w-auto" onClick={startCamera} disabled={scanBlocked || !eventId}>
+                      <Camera className="mr-2 h-4 w-4" />
+                      Start Camera
+                    </Button>
+                  ) : (
+                    <Button variant="outline" className="h-11 w-full rounded-lg font-bold sm:w-auto" onClick={stopCamera}>
+                      Stop Camera
+                    </Button>
+                  )}
+                </div>
+              </>
+            )}
+
+            {scanMode === "external" && (
+              <form
+                aria-label="External scanner"
+                className="grid min-w-0 gap-4 border-y border-slate-200 py-5"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  if (externalArmed && externalFocused && !scanBlocked) submitScan(externalPayload)
+                }}
+              >
+                <div role="status" aria-live="polite" className={`flex min-w-0 items-center gap-2 text-sm font-semibold ${externalArmed && externalFocused && !scanBlocked ? "text-emerald-800" : "text-amber-900"}`}>
+                  {externalArmed && externalFocused && !scanBlocked ? <ScanLine className="h-5 w-5 shrink-0" /> : <PauseCircle className="h-5 w-5 shrink-0" />}
+                  {loading === "scan" ? "Checking badge..." : pendingScan ? "Paused - awaiting scan confirmation" : !online ? "Paused - offline" : !canScanSelectedEvent ? "Paused - scan event is closed" : externalArmed && externalFocused && !scanBlocked ? "Ready for scanner input" : "Scanner input paused"}
+                </div>
+                <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">
+                  Scanner input
+                  <input
+                    ref={externalInputRef}
+                    value={externalPayload}
+                    onChange={(event) => setExternalPayload(event.target.value)}
+                    onFocus={() => setExternalFocused(true)}
+                    onBlur={() => {
+                      setExternalFocused(false)
+                      setExternalArmed(false)
+                      setExternalPayload("")
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter") return
+                      event.preventDefault()
+                      if (!event.repeat && !event.nativeEvent.isComposing && externalArmed && externalFocused && !scanBlocked) submitScan(event.currentTarget.value)
+                    }}
+                    disabled={!externalArmed || scanBlocked}
+                    inputMode="none"
+                    autoComplete="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    maxLength={4096}
+                    className="h-14 w-full min-w-0 rounded-lg border-2 border-slate-300 bg-white px-3 font-mono text-base outline-none focus:border-[#176F91] disabled:bg-slate-100"
+                  />
+                </label>
+                <div>
+                  <Button ref={readyInputButtonRef} type="button" variant="outline" className="min-h-11 w-full sm:w-auto" onClick={() => { setError(""); setExternalPayload(""); setExternalArmed(true) }} disabled={scanBlocked || externalArmed}>
+                    <ScanLine className="mr-2 h-4 w-4" />
+                    Ready to Scan
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {scanMode === "serial" && (
+              <div className="grid min-w-0 gap-4 border-y border-slate-200 py-5">
+                {!serialSupported ? (
+                  <div role="alert" className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+                    USB Serial is unavailable in this browser or connection. Use a supported browser over HTTPS, or select External Scanner or Camera.
+                  </div>
+                ) : <>
+                  <div role="status" aria-live="polite" className={`flex items-center gap-2 text-sm font-semibold ${serialState === "ready" && !scanBlocked ? "text-emerald-800" : "text-slate-700"}`}>
+                    <Usb className="h-5 w-5 shrink-0" />
+                    {serialState === "connecting" ? "Selecting / connecting serial port..." : serialState === "disconnecting" ? "Disconnecting serial port..." : serialState === "arming" ? "Clearing pending serial input..." : serialState === "ready" && !scanBlocked ? "Ready for serial scans" : serialConnected ? "Serial scanner connected - paused" : "Serial scanner disconnected"}
+                  </div>
+                  {serialError && <div role="alert" className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">{serialError}</div>}
+                  <fieldset disabled={serialState !== "disconnected"} className="grid min-w-0 gap-3">
+                    <legend className="mb-3 text-sm font-semibold text-slate-700">Serial port settings</legend>
+                    <label className="grid min-w-0 gap-2 text-sm font-semibold text-slate-700">
+                      Baud rate
+                      <select value={serialOptions.baudRate} onChange={(event) => setSerialOptions({ ...serialOptions, baudRate: Number(event.target.value) || "" })} className="h-11 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 text-base disabled:bg-slate-100">
+                        <option value="">Select scanner baud rate</option>
+                        {SERIAL_BAUD_RATES.map(rate => <option key={rate} value={rate}>{rate}</option>)}
+                      </select>
+                    </label>
+                    <details>
+                      <summary className="cursor-pointer py-2 text-sm font-semibold text-slate-700">Advanced port settings</summary>
+                      <div className="mt-2 grid min-w-0 grid-cols-2 gap-3">
+                        {[
+                          { key: "dataBits", label: "Data bits", values: [7, 8] },
+                          { key: "parity", label: "Parity", values: ["none", "even", "odd"] },
+                          { key: "stopBits", label: "Stop bits", values: [1, 2] },
+                          { key: "flowControl", label: "Flow control", values: ["none", "hardware"] },
+                        ].map(({ key, label, values }) => (
+                          <label key={key} className="grid min-w-0 gap-2 text-sm font-semibold text-slate-700">
+                            {label}
+                            <select value={serialOptions[key]} onChange={(event) => setSerialOptions({ ...serialOptions, [key]: ["dataBits", "stopBits"].includes(key) ? Number(event.target.value) : event.target.value })} className="h-11 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-2 text-base disabled:bg-slate-100">
+                              {values.map(value => <option key={value} value={value}>{value}</option>)}
+                            </select>
+                          </label>
+                        ))}
+                      </div>
+                    </details>
+                  </fieldset>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                    {!serialConnected ? (
+                      <Button type="button" className="min-h-11" disabled={serialState !== "disconnected" || !serialOptions.baudRate} onClick={() => { setSerialError(""); void serialControllerRef.current?.connect(serialOptions) }}>
+                        <Plug className="mr-2 h-4 w-4" />Connect Scanner
+                      </Button>
+                    ) : <>
+                      <Button ref={serialReadyButtonRef} type="button" className="min-h-11" disabled={scanBlocked || serialState !== "connected"} onClick={() => { setSerialError(""); serialControllerRef.current?.arm() }}>
+                        <ScanLine className="mr-2 h-4 w-4" />Ready to Scan
+                      </Button>
+                      <Button type="button" variant="outline" className="min-h-11" disabled={!["ready", "arming"].includes(serialState)} onClick={pauseSerial}>
+                        <PauseCircle className="mr-2 h-4 w-4" />Pause Scanner
+                      </Button>
+                      <Button type="button" variant="outline" className="min-h-11" onClick={() => { void serialControllerRef.current?.disconnect() }}>
+                        <Unplug className="mr-2 h-4 w-4" />Disconnect Scanner
+                      </Button>
+                    </>}
+                  </div>
+                </>}
+              </div>
+            )}
+
+            {scanMode === "manual" && <form
+              className="grid min-w-0 gap-3 border-y border-slate-200 py-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
               onSubmit={(event) => {
                 event.preventDefault()
                 submitScan(manualPayload)
               }}
             >
               <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">
-                Manual Badge Number / QR Payload
+                Badge Number / QR Payload
                 <input
+                  ref={manualInputRef}
                   value={manualPayload}
                   onChange={(event) => setManualPayload(event.target.value)}
-                  className="h-11 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#176F91]"
+                  disabled={scanBlocked}
+                  autoComplete="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  maxLength={4096}
+                  className="h-11 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-base outline-none focus:border-[#176F91]"
                   placeholder="Enter badge number, QR payload, or badge link"
                 />
               </label>
-              <Button type="submit" className="h-11 w-full rounded-lg bg-[#176F91] font-bold text-white hover:bg-[#0B5E78] sm:w-auto" disabled={!manualPayload || loading === "scan" || !canScanSelectedEvent}>
+              <Button type="submit" className="h-11 w-full rounded-lg bg-[#176F91] font-bold text-white hover:bg-[#0B5E78] sm:w-auto" disabled={!manualPayload.trim() || scanBlocked}>
                 {loading === "scan" ? <RefreshCcw className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
                 Submit
               </Button>
-            </form>
+            </form>}
+
+            <div>
+              <Button variant="outline" className="min-h-11 w-full font-bold sm:w-auto" disabled={loading === "scan"} onClick={() => loadEvents().catch((e) => setError(e.message))}>
+                <RefreshCcw className="mr-2 h-4 w-4" />
+                Refresh Events
+              </Button>
+            </div>
 
             {result && (
-              <Dialog.Root open onOpenChange={(open) => { if (!open) setResult(null) }}><Dialog.Portal>
+              <Dialog.Root open onOpenChange={(open) => { if (!open) closeResult() }}><Dialog.Portal>
                 <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/60" />
-                <Dialog.Content aria-describedby="scan-result-message" onPointerDownOutside={(e) => e.preventDefault()} className={`fixed left-1/2 top-1/2 z-[101] max-h-[90svh] w-[calc(100%-24px)] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border bg-white p-5 shadow-sm ${resultTone(result.status)}`}>
+                <Dialog.Content ref={resultDialogRef} tabIndex={-1} onOpenAutoFocus={(event) => { event.preventDefault(); resultDialogRef.current?.focus() }} onCloseAutoFocus={(event) => { event.preventDefault() }} onPointerDownOutside={(e) => e.preventDefault()} className={`fixed left-1/2 top-1/2 z-[101] max-h-[90svh] w-[calc(100%-24px)] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border bg-white p-5 shadow-sm ${resultTone(result.status)}`}>
                   <div className="flex items-start gap-3">
                     {result.status === "accepted" ? (
                       <CheckCircle2 className="mt-0.5 h-8 w-8 shrink-0" />
@@ -610,26 +977,22 @@ export default function PublicScannerPage() {
                     <div className="min-w-0">
                       <Dialog.Title className="text-xl font-semibold text-slate-950">{resultTitle(result)}</Dialog.Title>
                       {result.event?.name && <p className="mt-2 text-sm font-bold text-[#176F91]">{result.event.name}</p>}
-                      <Dialog.Description id="scan-result-message" className="mt-2 break-words text-sm leading-6 text-slate-700">{resultMessage(result)}</Dialog.Description>
+                      <Dialog.Description className="mt-2 break-words text-sm leading-6 text-slate-700">{resultMessage(result)}</Dialog.Description>
                       <AttendanceSummary result={result} />
                     </div>
                   </div>
-                  {result.status === "unconfirmed" && <Button type="button" className="mt-4 w-full" onClick={() => { if (requestRef.current) submitScan(requestRef.current.payload) }}>Retry this scan</Button>}
+                  {result.status === "unconfirmed" && <Button type="button" className="mt-4 w-full" disabled={loading === "scan" || !online} onClick={() => submitScan("", { retry: true })}>Retry this scan</Button>}
                   <div className="mt-5 grid gap-2 sm:grid-cols-2">
                     <Button
                       type="button"
                       className="h-11 rounded-lg bg-[#176F91] font-bold text-white hover:bg-[#0B5E78]"
-                      onClick={() => {
-                        setResult(null)
-                        lastPayloadRef.current = ""
-                        startCamera()
-                      }}
-                      disabled={!eventId || !canScanSelectedEvent}
+                      onClick={scanAnother}
+                      disabled={Boolean(pendingScan) || loading === "scan" || !eventId || !canScanSelectedEvent || !online || (scanMode === "serial" && !serialConnected)}
                     >
-                      <Camera className="mr-2 h-4 w-4" />
+                      {scanMode === "camera" ? <Camera className="mr-2 h-4 w-4" /> : scanMode === "serial" ? <Usb className="mr-2 h-4 w-4" /> : scanMode === "external" ? <ScanLine className="mr-2 h-4 w-4" /> : <Keyboard className="mr-2 h-4 w-4" />}
                       Scan Another Badge
                     </Button>
-                    <Button type="button" variant="outline" className="h-11 rounded-lg font-bold" onClick={() => setResult(null)}>
+                    <Button type="button" variant="outline" className="h-11 rounded-lg font-bold" onClick={closeResult}>
                       Close
                     </Button>
                   </div>

@@ -8,6 +8,10 @@ Run the HR portal on port 3000 and this application on port 3002. Set `HR_PORTAL
 
 The reporting interface is `/reporting`, backed by `/api/reporting/*` and the HR portal's `/api/v1/rec/rapporteur/*` endpoints. Rapporteurs require an active HR-managed assignment and an emailed OTP. Sessions use a scoped HttpOnly cookie; browsers never receive the bearer token. HR administrators manage assignments and approvers review submitted reports at `/dashboard/rec-conference/admin/reporting`. Existing rapporteur tables have fixed IDs, so there are no additional required environment variables.
 
+## External REC Scanners
+
+The public `/scanner` interface supports camera, external keyboard/HID scanner, USB Serial and manual entry modes. See [REC external scanner setup](docs/rec-hardware-scanner-setup.md) for Tera HW0009 USB/cradle/Bluetooth configuration, USB-COM port settings and browser permissions, operator instructions, troubleshooting and the hardware acceptance checklist. No new deployment variables or database changes are required.
+
 ## Verification
 
 Install the full dependency tree before building, including build-only Tailwind plugins. Run `npm test`, `npm run lint`, `npm run typecheck` and `npm run build`. Environment files remain local; deployment variables must be configured separately.

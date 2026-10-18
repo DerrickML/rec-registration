@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({ fetch: vi.fn(), cookies: vi.fn() }))
 vi.mock("@/lib/hr-portal-api", () => ({ fetchHrPortalJson: mocks.fetch }))
 vi.mock("next/headers", () => ({ cookies: mocks.cookies }))
 import { proxyScannerRequest, scannerDevEnabled } from "../lib/scanner-proxy"
+import { POST as submitScan } from "../app/api/scanner/scans/route"
 
 const request = (origin = "http://localhost:3002", path = "scans") => new Request(`http://localhost:3002/api/scanner/${path}`, { method: "POST", headers: { Origin: origin, "Content-Type": "application/json", Authorization: "Bearer forged" }, body: JSON.stringify({ eventId: "event", qrPayload: "badge" }) })
 
@@ -16,6 +17,19 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs())
 
 describe("scanner browser proxy", () => {
+  it.each(["REC26000794", "rec-26-000794", "REC2026123456", "REC-2026-123456"])("forwards manual badge %s through the authenticated scan API, not public badge lookup", async qrPayload => {
+    const body = { eventId: "event", qrPayload, clientNonce: "test-nonce-123" }
+    const response = await submitScan(new Request("http://localhost:3002/api/scanner/scans", { method: "POST", headers: { Origin: "http://localhost:3002", "Content-Type": "application/json" }, body: JSON.stringify(body) }))
+    expect(response.status).toBe(200)
+    expect(mocks.fetch).toHaveBeenCalledExactlyOnceWith("/api/v1/rec/scanner/scans", expect.objectContaining({ method: "POST", body, bearerToken: "http-only-secret" }))
+  })
+  it("preserves genuine inactive-badge errors without logging out the scanner", async () => {
+    mocks.fetch.mockRejectedValue(Object.assign(new Error("The badge is invalid, expired or revoked."), { status: 400, payload: { error: "The badge is invalid, expired or revoked.", code: "invalid_token" } }))
+    const response = await submitScan(request())
+    expect(response.status).toBe(400)
+    expect((await response.json()).code).toBe("invalid_token")
+    expect(response.headers.get("set-cookie")).toBeNull()
+  })
   it("rejects cross-origin mutations before contacting HR", async () => {
     const response = await proxyScannerRequest("/scans", request("https://other.example"), { method: "POST" })
     expect(response.status).toBe(403)

@@ -9,10 +9,12 @@ export async function GET(request, { params }) {
     const { token } = await params
     const query = new URL(request.url).searchParams
     const format = query.get("format") || "png", bleed = query.get("bleed") || "false"
-    if (!/^[A-Za-z0-9_-]{16,512}$/.test(token) || !["png", "pdf"].includes(format) || !["true", "false"].includes(bleed)) {
+    if (!/^[A-Za-z0-9_-]{16,512}$/.test(token) || !["png", "pdf"].includes(format) || !["true", "false"].includes(bleed) || (query.has("profile") && query.get("profile") !== "digital") || (query.has("v") && !/^[01]{4}$/.test(query.get("v")))) {
       return Response.json({ error: "Invalid badge print options." }, { status: 400, headers })
     }
     const options = new URLSearchParams({ format, bleed, download: query.get("download") === "1" ? "1" : "0" })
+    if (query.has("profile")) options.set("profile", "digital")
+    if (query.has("v")) options.set("v", query.get("v"))
     const response = await fetchHrPortalBinary(`/api/v1/rec/badges/${encodeURIComponent(token)}/print?${options}`, { signal: request.signal })
     if (!response.ok) {
       await response.body?.cancel()

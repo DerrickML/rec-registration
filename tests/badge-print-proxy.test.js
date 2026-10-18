@@ -32,3 +32,13 @@ it("does not serve unexpected HTML as a downloadable badge",async()=>{
   mocks.fetch.mockResolvedValue(new Response("<html>login</html>",{headers:{"Content-Type":"text/html"}}))
   expect((await call()).status).toBe(502)
 })
+it("forwards the authoritative digital profile and display revision, not caller detail overrides",async()=>{
+  mocks.fetch.mockResolvedValue(new Response("png",{headers:{"Content-Type":"image/png"}}))
+  const response=await call("profile=digital&v=0011&showCategory=true")
+  expect(response.status).toBe(200)
+  expect(mocks.fetch.mock.calls[0][0]).toBe(`/api/v1/rec/badges/${token}/print?format=png&bleed=false&download=0&profile=digital&v=0011`)
+})
+it("rejects unknown profiles and malformed display revisions",async()=>{
+  for (const query of ["profile=admin","profile=","v=11111","v=abcd","v=","v=0011x"]) expect((await call(query)).status).toBe(400)
+  expect(mocks.fetch).not.toHaveBeenCalled()
+})

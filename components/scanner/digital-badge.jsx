@@ -6,18 +6,19 @@ import Link from "next/link"
 import { CalendarDays, MapPin, RefreshCw, ShieldCheck } from "lucide-react"
 import MobileAppCta from "@/components/mobile-apps/mobile-app-cta"
 import { useAppConfiguration } from "@/components/mobile-apps/mobile-app-provider"
+import { digitalBadgeDisplay, digitalBadgeImageUrl } from "@/lib/badge-display.mjs"
 
-export default function DigitalBadge({ token, initialBadge }) {
-  const { configuration: appConfiguration } = useAppConfiguration(initialBadge?.conference?.$id || "", Boolean(initialBadge?.conference?.$id))
+function useDigitalBadge(token, initialBadge) {
   const [badge, setBadge] = useState(initialBadge)
   const [warning, setWarning] = useState("")
   const [refreshing, setRefreshing] = useState(false)
-  const [imageFailed, setImageFailed] = useState(false)
   useEffect(() => {
     let active = true
+    let inFlight = false
     const controller = new AbortController()
     const refresh = async () => {
-      if (document.hidden) return
+      if (document.hidden || inFlight) return
+      inFlight = true
       setRefreshing(true)
       try {
         const response = await fetch(`/api/badges/${encodeURIComponent(token)}`, { cache: "no-store", signal: controller.signal })
@@ -27,35 +28,58 @@ export default function DigitalBadge({ token, initialBadge }) {
         if (!response.ok) throw new Error("Verification unavailable")
         setBadge(data); setWarning("")
       } catch (error) { if (active && error.name !== "AbortError") setWarning("Unable to refresh badge status. The scan point will verify access.") }
-      finally { if (active) setRefreshing(false) }
+      finally { inFlight = false; if (active) setRefreshing(false) }
     }
     const timer = setInterval(refresh, 30000)
     document.addEventListener("visibilitychange", refresh)
     return () => { active = false; controller.abort(); clearInterval(timer); document.removeEventListener("visibilitychange", refresh) }
   }, [token])
+  return { badge, warning, refreshing }
+}
+
+function BadgeArtwork({ token, badge }) {
+  const [imageFailed, setImageFailed] = useState(false)
+  const display = digitalBadgeDisplay(badge)
+  const number = badge.badge?.badgeNumberLabel || badge.badge?.badgeNumber
+  if (imageFailed) return <div className="bg-white p-6 text-center"><Image unoptimized src={badge.qrDataUrl} alt="Conference entry QR code" width={300} height={300} className="mx-auto h-auto max-w-full" />{display.showRecId && <p className="mt-3 break-words font-mono font-bold">{number}</p>}<p role="status" className="mt-2 text-sm">The tag preview is unavailable. Your QR code can still be scanned.</p></div>
+  return <Image unoptimized loading="eager" src={digitalBadgeImageUrl(token, badge)} alt={`REC ${badge.conference?.year || ""} access badge for ${badge.registration?.name || "participant"}`} width={1098} height={1476} onError={() => setImageFailed(true)} className="mx-auto aspect-[93/125] h-auto w-full max-w-[420px] bg-white shadow-md" />
+}
+
+export function DigitalTag({ token, initialBadge }) {
+  const { badge, warning } = useDigitalBadge(token, initialBadge)
+  return <main data-site-motion="off" className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-[#e9eff3] p-4 text-[#172e3b]">
+    {warning && <p role="status" className="max-w-sm rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">{warning}</p>}
+    {badge ? <div style={{ width: "min(100%, 340px, calc((100dvh - 32px) * 93 / 125))" }}><BadgeArtwork key={digitalBadgeImageUrl(token, badge)} token={token} badge={badge} /></div> : <section className="max-w-sm text-center"><h1 className="text-xl font-bold">Badge unavailable</h1><p className="mt-2 text-sm">Please contact the conference team for assistance.</p></section>}
+  </main>
+}
+
+export default function DigitalBadge({ token, initialBadge }) {
+  const { badge, warning, refreshing } = useDigitalBadge(token, initialBadge)
+  const { configuration: appConfiguration } = useAppConfiguration(initialBadge?.conference?.$id || "", Boolean(initialBadge?.conference?.$id))
+  const display = digitalBadgeDisplay(badge)
   const registration = badge?.registration || {}
   const conference = badge?.conference || initialBadge?.conference || {}
   const days = conference.days || []
   const number = badge?.badge?.badgeNumberLabel || badge?.badge?.badgeNumber
   const date = value => new Date(value).toLocaleDateString("en-UG", { timeZone: "Africa/Kampala", dateStyle: "medium" })
-  const printUrl = `/api/badges/${encodeURIComponent(token)}/print`
   return <main className="min-h-screen bg-[#f0f4f7] px-3 py-6 text-[#172e3b] sm:px-6">
     <div className="mx-auto mb-5 flex max-w-4xl items-center justify-between gap-4"><Link href="/" className="text-sm font-semibold text-[#176F91]">REC & Expo</Link><span className="flex items-center gap-2 text-xs text-[#526774]">{refreshing ? <RefreshCw size={14} className="animate-spin" /> : <ShieldCheck size={14} />}Digital badge</span></div>
     {warning && <p role="status" className="mx-auto mb-4 max-w-4xl rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">{warning}</p>}
     {badge ? <div className="mx-auto grid max-w-4xl items-start gap-6 md:grid-cols-[minmax(0,420px)_minmax(0,1fr)] md:gap-9">
       <section aria-label="Conference tag" className="min-w-0">
-        {!imageFailed ? <Image unoptimized loading="eager" src={`${printUrl}?format=png`} alt={`REC ${conference.year} access badge for ${registration.name}, ${number}`} width={1098} height={1476} onError={() => setImageFailed(true)} className="mx-auto aspect-[93/125] h-auto w-full max-w-[420px] bg-white shadow-md" /> : <div className="bg-white p-6 text-center"><Image unoptimized src={badge.qrDataUrl} alt="Conference entry QR code" width={300} height={300} className="mx-auto h-auto max-w-full" /><p className="mt-3 font-mono font-bold">{number}</p><p className="mt-2 text-sm">The tag preview is unavailable. Your QR code can still be scanned.</p></div>}
+        <BadgeArtwork key={digitalBadgeImageUrl(token, badge)} token={token} badge={badge} />
       </section>
       <section className="min-w-0" aria-label="Badge details">
         <span className={`inline-flex rounded px-2 py-1 text-xs font-bold ${warning ? "bg-amber-50 text-amber-900" : "bg-[#e9f4ec] text-[#23623c]"}`}>{warning ? "Verification pending" : "Active"}</span>
         <h1 className="mt-3 break-words text-2xl font-bold leading-snug">{registration.name}</h1>
         <p className="mt-2 break-words text-sm leading-6">{registration.organization}</p>
-        <p className="mt-2 text-sm font-semibold text-[#176F91]">{(registration.registrationTypes || [registration.registrationType]).filter(Boolean).join(" / ")}</p>
-        <p className="mt-3 font-mono text-base font-bold">{number}</p>
+        {display.showCategory && <p className="mt-2 text-sm font-semibold text-[#176F91]">{(registration.registrationTypes || [registration.registrationType]).filter(Boolean).join(" / ")}</p>}
+        {display.showRecId && <p className="mt-3 break-words font-mono text-base font-bold">{number}</p>}
+        {display.showHashtag && conference.year && <p className="mt-2 text-sm font-bold text-[#176F91]">#REC{String(conference.year).slice(-2)}&amp;EXPO</p>}
         {(registration.exhibitorCompanies || []).map(company => <p key={company.applicationId} className="mt-2 break-words text-sm leading-6"><strong>Exhibiting with:</strong> {company.name}{company.booth ? ` (${company.booth})` : ""}</p>)}
         {registration.sponsorOrganization && <p className="mt-2 text-sm leading-6 text-[#526774]">Sponsored by {registration.sponsorOrganization}</p>}
-        <h2 className="mt-6 flex items-center gap-2 text-sm font-bold"><CalendarDays size={16} />Registered days</h2>
-        <ul className="mt-2 space-y-2 text-sm">{(registration.daysAttending || []).map(label => <li key={label} className="border-l-2 border-[#EFA74F] pl-3">{label}{days.find(d => d.label === label)?.date && <span className="block text-xs text-[#526774]">{date(days.find(d => d.label === label).date)}</span>}</li>)}</ul>
+        {display.showAttendanceDates && <><h2 className="mt-6 flex items-center gap-2 text-sm font-bold"><CalendarDays size={16} />Registered days</h2>
+        <ul className="mt-2 space-y-2 text-sm">{(registration.daysAttending || []).map(label => <li key={label} className="border-l-2 border-[#EFA74F] pl-3">{label}{days.find(d => d.label === label)?.date && <span className="block text-xs text-[#526774]">{date(days.find(d => d.label === label).date)}</span>}</li>)}</ul></>}
         <p className="mt-5 flex items-start gap-2 text-sm leading-6 text-[#526774]"><MapPin size={16} className="mt-1 shrink-0" />{[conference.venue, conference.location].filter(Boolean).join(", ")}</p>
         <div className="mt-6 border-t border-[#cad8e2] pt-5">
           <h2 className="text-base font-bold">Your digital badge</h2>

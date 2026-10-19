@@ -3,7 +3,12 @@
 import React from "react"
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import PublicScannerPage from "../app/scanner/page"
+import ScannerPortal from "../components/scanner/ScannerPortal"
+
+function PublicScannerPage() {
+  const [path, setPath] = React.useState("/scanner/events/entrance")
+  return <ScannerPortal view={path === "/scanner/activity" ? "activity" : path === "/scanner" ? "dashboard" : "scan"} routeEventId={path.startsWith("/scanner/events/") ? path.split("/").at(-1) : ""} onNavigate={setPath} />
+}
 
 const openEvent = { $id: "entrance", name: "Main entrance", isCurrentlyOpen: true, day: 1 }
 const secondEvent = { $id: "lunch", name: "Lunch", isCurrentlyOpen: true, day: 1 }
@@ -341,7 +346,7 @@ describe("external REC scanner input", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Close", exact: true }))
     eventRows = [secondEvent]
     fireEvent.click(screen.getByRole("button", { name: "Refresh Events" }))
-    await waitFor(() => expect(screen.getByRole("combobox", { name: "Scan Event" }).value).toBe("lunch"))
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Scan Event" }).value).toBe(""))
     fireEvent.click(screen.getByRole("button", { name: "Review pending scan" }))
     scanRequest = async () => accepted()
     fireEvent.click(screen.getByRole("button", { name: "Retry this scan" }))

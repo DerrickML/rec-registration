@@ -4,6 +4,10 @@ This guide covers Tera HW0009 QR scanners used with the REC operator website at 
 
 ## What You Need
 
+After sign-in, `/scanner` opens your assigned-event dashboard. Use **Open now**, **Upcoming**, **Ended**, search and the day/date/venue/type filters to find the correct scan point. Click **Scan** to enter `/scanner/events/[eventId]`, then choose the appropriate input mode. **My activity** at `/scanner/activity` shows only your own saved records, not every attempted or duplicate scan. Upcoming and ended event details can be opened but do not permit scanning. Times use Africa/Kampala (EAT, UTC+3).
+
+Do not leave a scan that is awaiting confirmation. Retry the original request or resolve it with an administrator; do not switch events or scan the badge again as a new request. Page navigation pauses capture, and an unresolved request remains in memory while navigating within the scanner workspace. Reloading/closing the browser loses that in-memory retry state.
+
 - A HW0009 scanner, charged battery and its USB cable or charging cradle.
 - A computer, phone or tablet with an up-to-date browser and internet access.
 - An active scanner-operator assignment for the conference and permitted scan events, configured by an administrator in the HR portal.

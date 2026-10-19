@@ -49,8 +49,8 @@ async function connect() {
 describe("USB serial scanner transport", () => {
   it("limits the serial Permissions-Policy to the scanner page's own origin", async () => {
     const headers = await nextConfig.headers()
-    expect(headers.find(item => item.source === "/scanner").headers).toContainEqual({ key: "Permissions-Policy", value: "serial=(self)" })
-    expect(headers.filter(item => item.source !== "/scanner").some(item => item.headers.some(header => header.key === "Permissions-Policy"))).toBe(false)
+    expect(headers.find(item => item.source === "/scanner/:path*").headers).toContainEqual({ key: "Permissions-Policy", value: "serial=(self)" })
+    expect(headers.filter(item => item.source !== "/scanner/:path*").some(item => item.headers.some(header => header.key === "Permissions-Policy"))).toBe(false)
   })
 
   it("requests a port during the connect action and remains paused until armed", async () => {

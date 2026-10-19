@@ -5,6 +5,8 @@ vi.mock("@/lib/hr-portal-api", () => ({ fetchHrPortalJson: mocks.fetch }))
 vi.mock("next/headers", () => ({ cookies: mocks.cookies }))
 import { proxyScannerRequest, scannerDevEnabled } from "../lib/scanner-proxy"
 import { POST as submitScan } from "../app/api/scanner/scans/route"
+import { GET as getEvents } from "../app/api/scanner/events/route"
+import { GET as getActivity } from "../app/api/scanner/activity/route"
 
 const request = (origin = "http://localhost:3002", path = "scans") => new Request(`http://localhost:3002/api/scanner/${path}`, { method: "POST", headers: { Origin: origin, "Content-Type": "application/json", Authorization: "Bearer forged" }, body: JSON.stringify({ eventId: "event", qrPayload: "badge" }) })
 
@@ -17,6 +19,12 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs())
 
 describe("scanner browser proxy", () => {
+  it("forwards only event and activity filter fields, never a caller's operator identity", async () => {
+    await getEvents(new Request("http://localhost:3002/api/scanner/events?page=2&venue=Lunch&userId=forged"))
+    expect(mocks.fetch).toHaveBeenLastCalledWith("/api/v1/rec/scanner/events?page=2&venue=Lunch", expect.objectContaining({ bearerToken: "http-only-secret" }))
+    await getActivity(new Request("http://localhost:3002/api/scanner/activity?page=3&status=accepted&scannerUserId=forged&conferenceId=other"))
+    expect(mocks.fetch).toHaveBeenLastCalledWith("/api/v1/rec/scanner/activity?page=3&status=accepted", expect.objectContaining({ bearerToken: "http-only-secret" }))
+  })
   it.each(["REC26000794", "rec-26-000794", "REC2026123456", "REC-2026-123456"])("forwards manual badge %s through the authenticated scan API, not public badge lookup", async qrPayload => {
     const body = { eventId: "event", qrPayload, clientNonce: "test-nonce-123" }
     const response = await submitScan(new Request("http://localhost:3002/api/scanner/scans", { method: "POST", headers: { Origin: "http://localhost:3002", "Content-Type": "application/json" }, body: JSON.stringify(body) }))

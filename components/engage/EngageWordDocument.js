@@ -82,6 +82,7 @@ import {
 } from "@/lib/engage/letterhead.mjs"
 import { EngageRemoteCarets } from "@/components/engage/EngageRemoteCarets"
 import { EngageSignatureProof } from "@/components/engage/EngageSignatureProof"
+import { EngageReportPagination, REPORT_PAGE } from "@/components/engage/engage-word-pagination.mjs"
 
 /** Strip "Label:" prefix from document-head paragraph text. */
 function plainValueAfterLabel(el) {
@@ -367,7 +368,7 @@ function ColorMenu({
   )
 }
 
-function WordToolbar({ editor }) {
+function WordToolbar({ editor, deferUpdates = false }) {
   const fileRef = useRef(null)
   const captionFormatRef = useRef(null)
   const lastTextSelectionRef = useRef(null)
@@ -389,11 +390,29 @@ function WordToolbar({ editor }) {
   // target while the author uses the Font ribbon (mousedown blurs the input).
   useEffect(() => {
     if (!editor) return undefined
-    const refresh = () => {
+    let refreshFrame = 0
+    let previousToolbarState = ""
+    const updateToolbar = () => {
+      refreshFrame = 0
       const live = getCaptionFormatTarget(editor)
       const remembered = captionFormatRef.current
+      if (deferUpdates) {
+        const { selection, storedMarks } = editor.state
+        const ancestors = []
+        for (let depth = 1; depth <= selection.$from.depth; depth += 1) {
+          const node = selection.$from.node(depth)
+          ancestors.push([node.type.name, node.attrs])
+        }
+        const key = JSON.stringify({ ancestors, marks: (storedMarks || selection.$from.marks()).map((mark) => mark.toJSON()), selected: selection.node?.attrs, range: !selection.empty, caption: (live || remembered)?.node?.attrs, undo: editor.can().undo(), redo: editor.can().redo() })
+        if (key === previousToolbarState) return
+        previousToolbarState = key
+      }
       setCaptionTarget(live ? { ...live, input: live.input || remembered?.input || null } : remembered)
       setToolbarTick((n) => n + 1)
+    }
+    const refresh = () => {
+      if (!deferUpdates) return updateToolbar()
+      if (!refreshFrame) refreshFrame = requestAnimationFrame(updateToolbar)
     }
     const rememberTextSelection = () => {
       try {
@@ -429,12 +448,13 @@ function WordToolbar({ editor }) {
     document.addEventListener("focusout", onFocusOut)
     refresh()
     return () => {
+      cancelAnimationFrame(refreshFrame)
       editor.off("selectionUpdate", rememberTextSelection)
       editor.off("transaction", refresh)
       document.removeEventListener("focusin", onFocusIn)
       document.removeEventListener("focusout", onFocusOut)
     }
-  }, [editor])
+  }, [editor, deferUpdates])
 
   if (!editor) return null
 
@@ -2233,6 +2253,9 @@ export const EngageWordDocument = forwardRef(function EngageWordDocument(
   editable = false,
   remoteEditors = [],
   onChangeField,
+  paginate = false,
+  paginationHeaderImage = null,
+  onDocumentDirty,
   officialTemplate = false,
   signatures = null,
 },
@@ -2240,8 +2263,11 @@ export const EngageWordDocument = forwardRef(function EngageWordDocument(
 ) {
   const [editorError, setEditorError] = useState("")
   const [pageZoom, setPageZoom] = useState(1)
+  const [pageCount, setPageCount] = useState(1)
   const pagesRef = useRef(null)
   const isOfficialSheet = Boolean(officialTemplate || letterhead)
+  const isA4Sheet = Boolean(isOfficialSheet || paginate)
+  const paginatedHeight = pageCount * REPORT_PAGE.height + (pageCount - 1) * REPORT_PAGE.gap
   const isBccecSheet = isBccecLetterheadProfile(letterhead)
   // Official BCCEC DOCX uses landscape A4 for KPIs — keep the stage that wide so pages are not clipped.
   const stageWidthMm = isBccecSheet ? A4_LANDSCAPE_WIDTH_MM : A4_WIDTH_MM
@@ -2317,13 +2343,15 @@ export const EngageWordDocument = forwardRef(function EngageWordDocument(
   const titleFieldKeyRef = useRef(titleFieldKey)
   const headerFieldKeysRef = useRef(headerFieldKeys)
   const onChangeFieldRef = useRef(onChangeField)
+  const onDocumentDirtyRef = useRef(onDocumentDirty)
   useLayoutEffect(() => {
     sectionsRef.current = sections
     letterheadRef.current = letterhead
     titleFieldKeyRef.current = titleFieldKey
     headerFieldKeysRef.current = headerFieldKeys
     onChangeFieldRef.current = onChangeField
-  }, [sections, letterhead, titleFieldKey, headerFieldKeys, onChangeField])
+    onDocumentDirtyRef.current = onDocumentDirty
+  }, [sections, letterhead, titleFieldKey, headerFieldKeys, onChangeField, onDocumentDirty])
   // Prefer saved HTML over an empty template seed whenever it exists.
   const startupHtml =
     initialHtml ||
@@ -2384,17 +2412,16 @@ export const EngageWordDocument = forwardRef(function EngageWordDocument(
       EngageTableHeader,
       EngageTableCell,
       TableCellFormat,
+      EngageReportPagination.configure({
+        enabled: paginate,
+        headerImage: paginationHeaderImage,
+        onLayout: ({ pageCount: count }) => setPageCount(count),
+      }),
     ],
-    [EngageTableCell, EngageTableHeader]
+    [EngageTableCell, EngageTableHeader, paginate, paginationHeaderImage]
   )
 
-  const editor = useEditor({
-    extensions: editorExtensions,
-    content: startupHtml || seedHtml,
-    editable,
-    immediatelyRender: false,
-    shouldRerenderOnTransaction: true,
-    editorProps: {
+  const stableEditorProps = useMemo(() => ({
       attributes: {
         class: "engage-word-prose",
       },
@@ -2449,7 +2476,16 @@ export const EngageWordDocument = forwardRef(function EngageWordDocument(
         })()
         return true
       },
-    },
+    }
+  ), [editable])
+
+  const editor = useEditor({
+    extensions: editorExtensions,
+    content: startupHtml || seedHtml,
+    editable,
+    immediatelyRender: false,
+    shouldRerenderOnTransaction: !paginate,
+    editorProps: stableEditorProps,
     onCreate: ({ editor: current }) => {
       setEditorError("")
       // Mark ownership immediately so a late parent setState cannot setContent and
@@ -2473,6 +2509,10 @@ export const EngageWordDocument = forwardRef(function EngageWordDocument(
         const html = sanitizeEngageDocumentHtml(current.getHTML() || "")
         if (html === lastEmittedHtml.current) return
         lastEmittedHtml.current = html
+        onDocumentDirtyRef.current?.(html)
+        // Rapporteurs need periodic snapshots during continuous typing, not a
+        // debounce which can wait indefinitely for the author to stop writing.
+        if (paginate && emitTimerRef.current) return
         if (emitTimerRef.current) clearTimeout(emitTimerRef.current)
         emitTimerRef.current = setTimeout(() => {
           emitTimerRef.current = null
@@ -2497,7 +2537,7 @@ export const EngageWordDocument = forwardRef(function EngageWordDocument(
   }, [])
 
   useEffect(() => {
-    if (!isOfficialSheet) {
+    if (!isA4Sheet) {
       setPageZoom(1)
       return undefined
     }
@@ -2516,7 +2556,7 @@ export const EngageWordDocument = forwardRef(function EngageWordDocument(
     const observer = new ResizeObserver(update)
     observer.observe(scroller)
     return () => observer.disconnect()
-  }, [isOfficialSheet, stageWidthMm])
+  }, [isA4Sheet, stageWidthMm])
 
   useImperativeHandle(
     ref,
@@ -2591,8 +2631,8 @@ export const EngageWordDocument = forwardRef(function EngageWordDocument(
 
   useEffect(() => {
     if (!editor || editor.isDestroyed) return
-    editor.setEditable(editable)
-  }, [editor, editable])
+    editor.setEditable(editable, !paginate)
+  }, [editor, editable, paginate])
 
   // Props → TipTap sync. Editable drafts: TipTap owns the document after first paint.
   // Calling setContent while typing is what throws the caret to the end of the doc.
@@ -2606,6 +2646,7 @@ export const EngageWordDocument = forwardRef(function EngageWordDocument(
       letterhead
     )
 
+    if (paginate && authorOwnsDocRef.current) return
     if (!editable) {
       if (!incoming || incoming === lastEmittedHtml.current) return
       applyingRef.current = true
@@ -2643,7 +2684,7 @@ export const EngageWordDocument = forwardRef(function EngageWordDocument(
     applyingRef.current = false
     // Intentionally ignore seedHtml identity — editable mode must not re-apply templates.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor, editable, content?._documentHtml, sectionKey, content?._templateSeedVersion, letterhead])
+  }, [editor, editable, content?._documentHtml, sectionKey, content?._templateSeedVersion, letterhead, paginate])
 
   if (editorError) {
     return (
@@ -2661,16 +2702,16 @@ export const EngageWordDocument = forwardRef(function EngageWordDocument(
   return (
     <EngageWordEditorBoundary>
       <div className="engage-word-editor">
-        {editable ? <WordToolbar editor={editor} /> : null}
+        {editable ? <WordToolbar editor={editor} deferUpdates={paginate} /> : null}
         <div className="engage-word-pages engage-word-pages--canvas" ref={pagesRef}>
           <div
-            className={isOfficialSheet ? "engage-word-a4-stage" : undefined}
-            data-page-stage={isBccecSheet ? "a4-with-landscape" : isOfficialSheet ? "a4" : undefined}
+            className={isA4Sheet ? "engage-word-a4-stage" : undefined}
+            data-page-stage={isBccecSheet ? "a4-with-landscape" : isA4Sheet ? "a4" : undefined}
             style={
-              isOfficialSheet
+              isA4Sheet
                 ? {
                     width: `${stageWidthMm * pageZoom}mm`,
-                    minHeight: `${A4_HEIGHT_MM * pageZoom}mm`,
+                    minHeight: paginate ? `${paginatedHeight * pageZoom}px` : `${A4_HEIGHT_MM * pageZoom}mm`,
                   }
                 : undefined
             }
@@ -2678,19 +2719,32 @@ export const EngageWordDocument = forwardRef(function EngageWordDocument(
             <article
               className={`engage-word-sheet engage-word-page${
                 isOfficialSheet ? " engage-word-sheet--official" : " engage-word-sheet-paged"
-              }`}
+              }${paginate ? " engage-word-sheet--paginated" : ""}`}
               data-engage-letterhead={letterhead || undefined}
+              data-page-count={paginate ? pageCount : undefined}
               style={
-                isOfficialSheet
+                isA4Sheet
                   ? {
                       width: `${A4_WIDTH_MM}mm`,
-                      minHeight: `${A4_HEIGHT_MM}mm`,
+                      minHeight: paginate ? `${paginatedHeight}px` : `${A4_HEIGHT_MM}mm`,
                       transform: pageZoom === 1 ? undefined : `scale(${pageZoom})`,
                       transformOrigin: isBccecSheet ? "top center" : "top left",
                     }
                   : undefined
               }
             >
+              {paginate ? (
+                <div className="engage-word-paper-stack" aria-hidden="true">
+                  {Array.from({ length: pageCount }, (_, index) => (
+                    <div key={index} className="engage-word-paper" style={{ top: `${index * (REPORT_PAGE.height + REPORT_PAGE.gap)}px` }}>
+                      <span className="engage-word-paper-number">{index + 1}</span>
+                    </div>
+                  ))}
+                  {Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) => (
+                    <div key={`gap-${index}`} className="engage-word-paper-gap" style={{ top: `${(index + 1) * REPORT_PAGE.height + index * REPORT_PAGE.gap - REPORT_PAGE.margin}px` }} />
+                  ))}
+                </div>
+              ) : null}
               {headerLogos.length ? (
                 <div
                   className="engage-letterhead"
@@ -2724,7 +2778,7 @@ export const EngageWordDocument = forwardRef(function EngageWordDocument(
                   })}
                 </div>
               ) : null}
-              <EditorContent editor={editor} />
+              <EditorContent className="engage-word-editor-body" editor={editor} />
               {Array.isArray(signatures) && signatures.length ? (
                 <EngageSignatureProof signatures={signatures} compact />
               ) : null}

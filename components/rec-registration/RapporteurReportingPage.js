@@ -3,11 +3,21 @@
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 import { EngageWordDocument } from "@/components/engage/EngageWordDocument"
+import { createReportingDraft, discardRecovery, loadRecovery } from "@/lib/reporting-draft.mjs"
 import { downloadRapporteurReport, purposeFromDocument, rapporteurDocumentHtml, reportContentReady } from "@/lib/rec-conference/rapporteur-rules.mjs"
 import "@/styles/engage.css"
 import "./rapporteur-reporting.css"
+import "./rapporteur-draft.css"
 
 const STATUS = { new: "Not started", draft: "Draft", submitted: "With approver", returned: "Returned", approved: "Approved" }
+
+function saveLabel(state, typing = false) {
+  if (state.status === "saved") return typing ? "Unsaved changes…" : "Saved"
+  if (state.status === "retrying") return "Connection interrupted. Retrying…"
+  if (state.status === "conflict") return state.error?.message || "The report changed. Your writing is kept in this browser."
+  if (state.status === "error") return state.error?.message || "Not saved. Your writing is still here."
+  return "Saving…"
+}
 
 function shortDay(label) {
   const match = String(label || "").match(/^(\d+)(?:st|nd|rd|th)?\s+([A-Za-z]+)/)
@@ -41,6 +51,7 @@ async function fetchJson(url, options = {}) {
   if (!response.ok) {
     const error = new Error(payload.error || "Request failed")
     error.status = response.status
+    error.code = payload.code
     throw error
   }
   return payload
@@ -62,14 +73,20 @@ export default function ReportingPage() {
   const [notice, setNotice] = useState("")
   const [pickedDay, setPickedDay] = useState("")
   const [saved, setSaved] = useState("")
+  const [saveState, setSaveState] = useState(null)
+  const [recoveryCopies, setRecoveryCopies] = useState([])
+  const [history, setHistory] = useState(null)
+  const [editorEpoch, setEditorEpoch] = useState(0)
   const [busy, setBusy] = useState(false)
   const revision = useRef(1)
-  const dirty = useRef(false)
   const previewAssignment = useRef("")
   const reportRef = useRef(null)
   const contentRef = useRef(null)
-  const saveTimer = useRef(null)
-  const saveChain = useRef(Promise.resolve())
+  const editorRef = useRef(null)
+  const draftRef = useRef(null)
+  const editorDirty = useRef(false)
+  const pendingDocumentHtml = useRef(null)
+  const identityRef = useRef("")
 
   useEffect(() => {
     reportRef.current = report
@@ -92,7 +109,39 @@ export default function ReportingPage() {
       .catch(() => null)
   }, [])
 
-  useEffect(() => () => clearTimeout(saveTimer.current), [])
+  useEffect(() => {
+    function preserve() {
+      if (!draftRef.current) return
+      if (editorDirty.current) editorRef.current?.flushDocument()
+      draftRef.current.flush().catch(() => null)
+    }
+    function warnBeforeLeaving(event) {
+      const wasDirty = editorDirty.current || draftRef.current?.snapshot().dirty
+      preserve()
+      if (wasDirty || draftRef.current?.snapshot().dirty) {
+        event.preventDefault()
+        event.returnValue = ""
+      }
+    }
+    function onVisibility() { if (document.visibilityState === "hidden") preserve() }
+    window.addEventListener("beforeunload", warnBeforeLeaving)
+    window.addEventListener("online", preserve)
+    document.addEventListener("visibilitychange", onVisibility)
+    return () => {
+      window.removeEventListener("beforeunload", warnBeforeLeaving)
+      window.removeEventListener("online", preserve)
+      document.removeEventListener("visibilitychange", onVisibility)
+      const controller = draftRef.current
+      draftRef.current = null
+      // Client-side Back/Forward can unmount without beforeunload. The latest
+      // dirty HTML is independent of the child editor's ref/unmount ordering.
+      if (controller && editorDirty.current && typeof pendingDocumentHtml.current === "string") {
+        const documentHtml = pendingDocumentHtml.current
+        controller.update({ ...contentRef.current, documentHtml, purpose: purposeFromDocument(documentHtml) })
+      }
+      controller?.dispose()
+    }
+  }, [])
 
   useEffect(() => {
     if (!report || (report.status !== "submitted" && report.status !== "returned")) return undefined
@@ -102,47 +151,173 @@ export default function ReportingPage() {
       : `/api/reporting/comments?sessionKey=${encodeURIComponent(report.sessionKey)}`
     const timer = setInterval(() => {
       fetchJson(url)
-        .then((data) => setComments(data.comments || []))
+        .then((data) => { if (reportRef.current?.$id === report.$id) setComments(data.comments || []) })
         .catch(() => null)
     }, 8000)
     return () => clearInterval(timer)
   }, [report])
 
-  function writeSave(sessionKey, next) {
-    const current = reportRef.current
-    if (!current || current.sessionKey !== sessionKey) return Promise.resolve()
-    if (current.status !== "draft" && current.status !== "returned") return Promise.resolve()
-    if (contentRef.current !== next) return Promise.resolve()
-    const assignmentId = previewAssignment.current
-    return fetchJson(assignmentId ? "/api/rec/rapporteur/preview-report" : "/api/reporting/report", {
-      method: "PUT",
-      body: JSON.stringify(assignmentId
-        ? { assignmentId, sessionKey, content: next, expectedRevision: revision.current }
-        : { sessionKey, content: next, expectedRevision: revision.current }),
-    })
-      .then((data) => {
-        revision.current = data.revision
-        if (contentRef.current === next) {
-          dirty.current = false
-          setSaved("Saved")
-        }
+  function installReport(data) {
+    if (!data?.$id || !data.content || typeof data.content !== "object" || Array.isArray(data.content) || !Number.isSafeInteger(data.revision) || data.revision < 1) {
+      throw new Error("This report could not be loaded. Its saved content has not been changed.")
+    }
+    draftRef.current?.dispose()
+    draftRef.current = null
+    reportRef.current = data
+    contentRef.current = data.content
+    revision.current = data.revision
+    editorDirty.current = false
+    pendingDocumentHtml.current = null
+    identityRef.current = ["rec-rapporteur", data.conferenceId, home?.email || email, data.$id].join(":")
+    setReport(data)
+    setContent(data.content)
+    setHistory(null)
+    setEditorEpoch((value) => value + 1)
+    if (!home?.readOnly && (data.status === "draft" || data.status === "returned")) {
+      const assignmentId = home?.preview ? home.assignmentId : ""
+      const controller = createReportingDraft({
+        identity: identityRef.current,
+        revision: data.revision,
+        content: data.content,
+        debounceMs: 700,
+        maxWaitMs: 2000,
+        save: (payload) => fetchJson(assignmentId ? "/api/rec/rapporteur/preview-report" : "/api/reporting/report", {
+          method: "PUT",
+          body: JSON.stringify({ ...payload, sessionKey: data.sessionKey, ...(assignmentId ? { assignmentId } : {}) }),
+        }),
+        onState: (state) => {
+          if (draftRef.current !== controller || reportRef.current?.$id !== data.$id) return
+          revision.current = state.revision
+          setSaveState(state)
+          setSaved(saveLabel(state, editorDirty.current))
+        },
       })
-      .catch((err) => setSaved(err.status === 409 ? "Reload this report. It changed somewhere else." : err.message))
+      draftRef.current = controller
+      setSaveState(controller.snapshot())
+      setSaved("Saved")
+    } else {
+      setSaveState(null)
+      setSaved("")
+    }
   }
 
   function edit(next) {
+    if (!draftRef.current) return
     contentRef.current = next
-    dirty.current = true
-    setSaved("Saving")
+    editorDirty.current = false
+    pendingDocumentHtml.current = null
     setContent(next)
+    const state = draftRef.current.update(next)
+    setSaveState(state)
+    setSaved(saveLabel(state))
+  }
+
+  async function flushCurrent() {
+    const controller = draftRef.current
+    if (!controller) return
+    if (editorDirty.current) editorRef.current?.flushDocument()
+    await controller.flush()
+    if (controller.snapshot().dirty) throw new Error("This report is not fully saved. Your writing has been kept here.")
+  }
+
+  async function closeReport() {
+    setBusy(true)
+    setError("")
+    try {
+      await flushCurrent()
+      const current = reportRef.current
+      draftRef.current?.dispose()
+      draftRef.current = null
+      reportRef.current = null
+      setReport(null)
+      setContent(null)
+      setRecoveryCopies([])
+      setHistory(null)
+      setHome((previous) => ({ ...previous, sessions: previous.sessions.map((item) => item.sessionKey === current.sessionKey ? { ...item, status: current.status, reportId: current.$id } : item) }))
+    } catch (err) {
+      setError(err.message)
+    } finally { setBusy(false) }
+  }
+
+  async function leaveReport(event, href) {
+    if (!draftRef.current || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    event.preventDefault()
+    if (busy) return
+    setBusy(true)
+    setError("")
+    try {
+      await flushCurrent()
+      window.location.assign(href)
+    } catch (err) {
+      setError(err.message)
+      setBusy(false)
+    }
+  }
+
+  function downloadCurrent() {
+    if (draftRef.current && editorDirty.current) editorRef.current?.flushDocument()
+    downloadRapporteurReport({ ...reportRef.current, content: contentRef.current }).catch((err) => setError(err.message))
+  }
+
+  async function recoverCopy(copy) {
+    if (!draftRef.current) return
+    setBusy(true)
+    setError("")
+    try {
+      edit(copy.content)
+      setEditorEpoch((value) => value + 1)
+      setRecoveryCopies([])
+      await draftRef.current.flush()
+      await discardRecovery(identityRef.current, { copyId: copy.copyId })
+      setNotice("The browser copy has been saved as a new version. The previous saved version is preserved.")
+    } catch (err) { setError(err.message) }
+    finally { setBusy(false) }
+  }
+
+  async function discardCopy(copy) {
+    try {
+      await discardRecovery(identityRef.current, { copyId: copy.copyId })
+      setRecoveryCopies((copies) => copies.filter((item) => item.copyId !== copy.copyId))
+    } catch (err) { setError(err.message) }
+  }
+
+  async function loadHistory() {
+    setError("")
     const current = reportRef.current
-    if (!current || (current.status !== "draft" && current.status !== "returned")) return
-    const sessionKey = current.sessionKey
-    clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => {
-      const snapshot = contentRef.current
-      saveChain.current = saveChain.current.then(() => writeSave(sessionKey, snapshot)).catch(() => null)
-    }, 350)
+    try {
+      const assignmentId = previewAssignment.current
+      const query = new URLSearchParams({ sessionKey: current.sessionKey, ...(assignmentId ? { assignmentId, history: "1" } : {}) })
+      const result = await fetchJson(`${assignmentId ? "/api/rec/rapporteur/preview-report" : "/api/reporting/report/history"}?${query}`)
+      if (reportRef.current?.$id === current.$id) setHistory(result)
+    } catch (err) { if (reportRef.current?.$id === current?.$id) setError(err.message) }
+  }
+
+  async function restoreVersion(targetRevision) {
+    setBusy(true)
+    setError("")
+    try {
+      await flushCurrent()
+      const current = reportRef.current
+      const assignmentId = previewAssignment.current
+      const restored = await fetchJson(assignmentId ? "/api/rec/rapporteur/preview-report" : "/api/reporting/report/restore", {
+        method: "POST",
+        body: JSON.stringify({ sessionKey: current.sessionKey, revision: targetRevision, expectedRevision: revision.current, ...(assignmentId ? { assignmentId, action: "restore" } : {}) }),
+      })
+      installReport({ ...current, ...restored })
+      setNotice(`Version ${targetRevision} was restored as a new saved version. Earlier versions are preserved.`)
+    } catch (err) { setError(err.message) }
+    finally { setBusy(false) }
+  }
+
+  async function downloadVersion(targetRevision) {
+    setError("")
+    try {
+      const current = reportRef.current
+      const assignmentId = previewAssignment.current
+      const query = new URLSearchParams({ sessionKey: current.sessionKey, revision: String(targetRevision), ...(assignmentId ? { assignmentId, history: "1" } : {}) })
+      const version = await fetchJson(`${assignmentId ? "/api/rec/rapporteur/preview-report" : "/api/reporting/report/history"}?${query}`)
+      await downloadRapporteurReport({ ...current, content: version.content })
+    } catch (err) { setError(err.message) }
   }
 
   async function lookup(event) {
@@ -218,22 +393,31 @@ export default function ReportingPage() {
     setSaved("")
     setNotice("")
     try {
+      await flushCurrent()
+      let nextReport
+      let nextComments = []
       if (home?.preview) {
         const data = await fetchJson(`/api/rec/rapporteur/preview-report?assignmentId=${encodeURIComponent(home.assignmentId)}&sessionKey=${encodeURIComponent(sessionKey)}`)
-        revision.current = data.report?.revision || 1
-        dirty.current = false
-        setReport(data.report)
-        setContent(data.report?.content || {})
-        setComments(data.comments || [])
-        return
+        nextReport = data.report
+        nextComments = data.comments || []
+      } else {
+        nextReport = await fetchJson(`/api/reporting/report?sessionKey=${encodeURIComponent(sessionKey)}`)
+        // A failed comments request must not hide successfully loaded report content.
+        const thread = await fetchJson(`/api/reporting/comments?sessionKey=${encodeURIComponent(sessionKey)}`).catch(() => ({ comments: [] }))
+        nextComments = thread.comments || []
       }
-      const data = await fetchJson(`/api/reporting/report?sessionKey=${encodeURIComponent(sessionKey)}`)
-      revision.current = data.revision || 1
-      dirty.current = false
-      setReport(data)
-      setContent(data.content)
-      const thread = await fetchJson(`/api/reporting/comments?sessionKey=${encodeURIComponent(sessionKey)}`)
-      setComments(thread.comments || [])
+      if (!nextReport?.$id || !nextReport.content || typeof nextReport.content !== "object") throw new Error("This report could not be loaded. Its saved content has not been changed.")
+      const identity = ["rec-rapporteur", nextReport.conferenceId, home?.email || email, nextReport.$id].join(":")
+      const recovery = !home?.readOnly && (nextReport.status === "draft" || nextReport.status === "returned")
+        ? await loadRecovery(identity).catch(() => {
+          setNotice("Browser recovery is unavailable. Keep this report open until the save indicator confirms Saved.")
+          return null
+        })
+        : null
+      const copies = recovery ? [recovery, ...(recovery.otherCopies || [])].filter((copy) => JSON.stringify(copy.content) !== JSON.stringify(nextReport.content)) : []
+      installReport(nextReport)
+      setRecoveryCopies(copies)
+      setComments(nextComments)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -244,34 +428,28 @@ export default function ReportingPage() {
   async function submitReport() {
     setBusy(true)
     setError("")
-    clearTimeout(saveTimer.current)
     try {
-      await saveChain.current
+      await flushCurrent()
       const assignmentId = previewAssignment.current
-      if (dirty.current) {
-        const savedReport = await fetchJson(assignmentId ? "/api/rec/rapporteur/preview-report" : "/api/reporting/report", {
-          method: "PUT",
-          body: JSON.stringify(assignmentId
-            ? { assignmentId, sessionKey: report.sessionKey, content, expectedRevision: revision.current }
-            : { sessionKey: report.sessionKey, content, expectedRevision: revision.current }),
-        })
-        revision.current = savedReport.revision
-        dirty.current = false
-      }
       const result = assignmentId
         ? await fetchJson("/api/rec/rapporteur/preview-report", {
           method: "POST",
-          body: JSON.stringify({ assignmentId, sessionKey: report.sessionKey }),
+          body: JSON.stringify({ assignmentId, sessionKey: report.sessionKey, expectedRevision: revision.current }),
         })
         : await fetchJson("/api/reporting/report/submit", {
           method: "POST",
-          body: JSON.stringify({ sessionKey: report.sessionKey }),
+          body: JSON.stringify({ sessionKey: report.sessionKey, expectedRevision: revision.current }),
         })
+      draftRef.current?.dispose()
+      draftRef.current = null
+      reportRef.current = null
       setReport(null)
       setContent(null)
       setComments([])
       setComment("")
       setSaved("")
+      setRecoveryCopies([])
+      setHistory(null)
       setNotice(result.notice ? "Sent to the approver for review. The approver could not be notified." : "Sent to the approver for review.")
       setHome(assignmentId
         ? await fetchJson(`/api/rec/rapporteur/dashboard?assignmentId=${encodeURIComponent(assignmentId)}`)
@@ -287,6 +465,7 @@ export default function ReportingPage() {
     event.preventDefault()
     setBusy(true)
     try {
+      await flushCurrent()
       const assignmentId = previewAssignment.current
       const data = assignmentId
         ? await fetchJson("/api/rec/rapporteur/preview-report", {
@@ -307,13 +486,24 @@ export default function ReportingPage() {
   }
 
   async function logout() {
-    await fetchJson("/api/reporting/auth/logout", { method: "POST", body: "{}" }).catch(() => null)
-    setHome(null)
-    setReport(null)
-    setNotice("")
+    setBusy(true)
+    setError("")
+    try {
+      await flushCurrent()
+      await fetchJson("/api/reporting/auth/logout", { method: "POST", body: "{}" })
+      draftRef.current?.dispose()
+      draftRef.current = null
+      reportRef.current = null
+      setHome(null)
+      setReport(null)
+      setContent(null)
+      setRecoveryCopies([])
+      setNotice("")
+    } catch (err) { setError(err.message) }
+    finally { setBusy(false) }
   }
 
-  const editable = Boolean(report && (report.status === "draft" || report.status === "returned"))
+  const editable = Boolean(report && !home?.readOnly && !recoveryCopies.length && !busy && (report.status === "draft" || report.status === "returned"))
   const sessions = (home?.sessions || [])
     .slice()
     .sort((left, right) => (Number(left.sortAt) - Number(right.sortAt)) || String(left.title || "").localeCompare(String(right.title || "")))
@@ -420,7 +610,7 @@ export default function ReportingPage() {
       {onDesk ? (
         <aside className="rec-side">
           <img className="rec-side-logo" src="/nrep-logo.png" alt="NREP" width="72" height="72" />
-          <Link href="/" className="rec-desk-brand">
+          <Link href="/" className="rec-desk-brand" onClick={(event) => leaveReport(event, "/")}>
             <span>
               <small>REC26 &amp; Expo</small>
               <strong>Rapporteur</strong>
@@ -453,7 +643,7 @@ export default function ReportingPage() {
         </aside>
       ) : null}
       {onDesk ? null : <header className="rec-desk-bar">
-        <Link href="/" className="rec-desk-brand">
+        <Link href="/" className="rec-desk-brand" onClick={(event) => leaveReport(event, "/")}>
           <span>
             <small>REC26 &amp; Expo</small>
             <strong>Rapporteur</strong>
@@ -467,7 +657,7 @@ export default function ReportingPage() {
         ) : <div />}
         <div className="rec-desk-end">
           {report && saved ? <span className={`rec-desk-save${saved === "Saved" ? " is-saved" : ""}`}>{saved}</span> : null}
-          {home?.preview ? <Link href="/dashboard/rec-conference/admin/reporting" className="plain">Rapporteurs</Link> : home ? <button type="button" className="plain" onClick={logout}>Sign out</button> : null}
+          {home?.preview ? <Link href="/dashboard/rec-conference/admin/reporting" className="plain" onClick={(event) => leaveReport(event, "/dashboard/rec-conference/admin/reporting")}>Rapporteurs</Link> : home ? <button type="button" className="plain" disabled={busy} onClick={logout}>Sign out</button> : null}
         </div>
       </header>}
       {onDesk ? (
@@ -504,19 +694,42 @@ export default function ReportingPage() {
       {report && content ? (
         <div className="rec-desk-write">
         <article className="rec-desk-editor">
-          <button type="button" className="plain" onClick={() => setReport(null)}>Sessions</button>
+          <button type="button" className="plain" onClick={closeReport} disabled={busy}>Sessions</button>
+          {notice ? <p className="rec-desk-notice" role="status">{notice}</p> : null}
+          {recoveryCopies.length ? (
+            <section className="rec-draft-recovery" aria-label="Browser recovery">
+              <h2>Unsaved writing was found in this browser</h2>
+              <p>The saved report is shown below. Choose a browser copy to recover, or download it before discarding it. Recovering creates a new version and preserves the saved report.</p>
+              {recoveryCopies.map((copy) => (
+                <div key={copy.copyId} className="rec-draft-copy">
+                  <span>Browser copy from {new Date(copy.updatedAt).toLocaleString("en-GB", { timeZone: "Africa/Kampala" })} (based on version {copy.revision})</span>
+                  <button type="button" disabled={busy} onClick={() => recoverCopy(copy)}>Recover this copy</button>
+                  <button type="button" className="plain" onClick={() => downloadRapporteurReport({ ...report, content: copy.content }).catch((err) => setError(err.message))}>Download browser copy</button>
+                  <button type="button" className="plain" disabled={busy} onClick={() => discardCopy(copy)}>Discard browser copy</button>
+                </div>
+              ))}
+            </section>
+          ) : null}
           {report.status === "submitted" ? <p className="rec-desk-state">With the approver for review.</p> : null}
           {report.status === "returned" ? <p className="rec-desk-state is-returned">The approver returned this report. Update it, then send it again.</p> : null}
           {report.status === "approved" ? <p className="rec-desk-state is-approved">Approved.</p> : null}
           <EngageWordDocument
-            key={report.sessionKey}
+            key={`${report.$id}:${editorEpoch}`}
+            ref={editorRef}
+            paginate
+            paginationHeaderImage="/reporting/nrep-mark.png"
             editable={editable}
             sections={[]}
             content={{ _documentHtml: rapporteurDocumentHtml({ ...report, content }) }}
             onChangeField={(_key, patch) => {
               const documentHtml = patch?._documentHtml
-              if (!documentHtml) return
-              edit({ ...content, documentHtml, purpose: purposeFromDocument(documentHtml) })
+              if (typeof documentHtml !== "string") return
+              edit({ ...contentRef.current, documentHtml, purpose: purposeFromDocument(documentHtml) })
+            }}
+            onDocumentDirty={(html) => {
+              if (typeof html === "string") pendingDocumentHtml.current = html
+              if (!editorDirty.current) setSaved("Unsaved changes…")
+              editorDirty.current = true
             }}
           />
           {(report.mediaLinks || []).length ? (
@@ -530,11 +743,29 @@ export default function ReportingPage() {
             </section>
           ) : null}
           <div className="rec-report-actions">
-            <span className="quiet">{saved}</span>
-            <button type="button" className="plain" onClick={() => downloadRapporteurReport({ ...report, content })}>Download</button>
+            <span className="quiet" role="status" aria-live="polite">{saved}</span>
+            <button type="button" className="plain" onClick={downloadCurrent}>Download</button>
+            {saveState && !recoveryCopies.length ? <button type="button" className="plain" disabled={busy || saveState?.status === "conflict"} onClick={() => flushCurrent().catch((err) => setError(err.message))}>Save now</button> : null}
+            <button type="button" className="plain" disabled={busy} onClick={loadHistory}>Version history</button>
             {editable && !reportContentReady(content) ? <span className="rec-report-need">Write the Purpose of the Session to send this report.</span> : null}
             {editable ? <button type="button" className="gold" disabled={busy || !reportContentReady(content)} onClick={submitReport}>Send to approver</button> : null}
           </div>
+          {saveState?.recoveryStatus === "unavailable" ? <p className="warn" role="alert">This browser could not keep a recovery copy. {saveState.recoveryError?.message || "Keep the report open until it is saved, or download a copy."}</p> : null}
+          {saveState?.status === "conflict" ? <p className="warn" role="alert">Keep this tab open or download your writing. Open the saved report in another tab to compare versions before recovering this browser copy.</p> : null}
+          {history ? (
+            <section className="rec-draft-history" aria-label="Version history">
+              <h2>Saved versions</h2>
+              <p>Restoring creates a new saved version. Earlier writing stays recoverable.</p>
+              {history.versions?.length ? history.versions.map((version) => (
+                <div className="rec-draft-version" key={version.revision}>
+                  <span>Version {version.revision} · {version.kind} · {new Date(version.createdAt).toLocaleString("en-GB", { timeZone: "Africa/Kampala" })}</span>
+                  {version.kind !== "legacy" ? <button type="button" className="plain" disabled={busy} onClick={() => downloadVersion(version.revision)}>Download version</button> : null}
+                  {editable && version.revision < (saveState?.revision || report.revision) ? <button type="button" className="plain" disabled={busy} onClick={() => restoreVersion(version.revision)}>Restore as a new version</button> : null}
+                </div>
+              )) : <p>Versions are retained from the first protected save. Older revision numbers do not contain saved copies.</p>}
+              <button type="button" className="plain" onClick={() => setHistory(null)}>Close history</button>
+            </section>
+          ) : null}
         </article>
         {report.status !== "draft" && report.status !== "new" ? (
           <aside className="rec-desk-notes">

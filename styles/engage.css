@@ -2737,6 +2737,142 @@ a.engage-stat-card.is-link:focus-visible {
   }
 }
 
+/* Rapporteur page layout is decoration-only: there is still one TipTap
+   document, including when a paragraph or a single table cell crosses pages. */
+.engage-word-sheet.engage-word-sheet--paginated {
+  width: 210mm !important;
+  max-width: none !important;
+  padding: 20mm !important;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  isolation: isolate;
+}
+
+.engage-word-sheet--paginated .engage-word-editor-body {
+  position: relative;
+  z-index: 1;
+}
+
+.engage-word-sheet--paginated .engage-word-prose {
+  min-height: 0 !important;
+  overflow: visible;
+}
+
+.engage-word-paper-stack {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+.engage-word-paper {
+  position: absolute;
+  left: 0;
+  width: 210mm;
+  height: 297mm;
+  background: white;
+  border: 1px solid #c9d3df;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1);
+}
+
+.engage-word-paper-number {
+  position: absolute;
+  z-index: 4;
+  bottom: 8mm;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font: 10pt Cambria, "Times New Roman", serif;
+  color: #64748b;
+}
+
+.engage-word-paper-gap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  height: calc(40mm + 24px);
+  /* Mask table borders and cell shading in page margins, without modifying
+     any table/cell in the document being saved. */
+  background: linear-gradient(to bottom, white 0, white 20mm, #e8edf3 20mm, #e8edf3 calc(20mm + 24px), white calc(20mm + 24px), white 100%);
+}
+
+.engage-word-auto-page-break {
+  display: block !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  pointer-events: none;
+  user-select: none;
+}
+
+.engage-word-pagination-header {
+  position: relative;
+  display: block;
+  height: 26mm;
+  pointer-events: none;
+  user-select: none;
+}
+
+.engage-word-pagination-header-logo {
+  position: absolute;
+  display: block;
+  top: -12mm;
+  left: 0;
+  right: 0;
+  height: 32.7mm;
+  background-position: center;
+  background-size: 32.5mm 32.7mm;
+  background-repeat: no-repeat;
+}
+
+.engage-word-sheet--paginated .engage-word-page-break {
+  height: 0;
+  margin: 0;
+  border: 0;
+}
+
+.engage-word-sheet--paginated .engage-word-page-break span {
+  display: none;
+}
+
+.engage-word-sheet--paginated .engage-word-prose figure img,
+.engage-word-sheet--paginated .engage-word-prose .engage-word-doc-image:not(.engage-word-logo) {
+  max-height: 225mm;
+  object-fit: contain;
+}
+
+@media print {
+  .engage-word-paper-stack,
+  .engage-word-pagination-header,
+  .engage-word-auto-page-break {
+    display: none !important;
+  }
+
+  .engage-word-sheet.engage-word-sheet--paginated {
+    width: auto !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+  }
+
+  .engage-word-sheet--paginated .engage-word-prose h1,
+  .engage-word-sheet--paginated .engage-word-prose h2,
+  .engage-word-sheet--paginated .engage-word-prose h3,
+  .engage-word-sheet--paginated .engage-word-prose thead {
+    break-after: avoid;
+  }
+
+  .engage-word-sheet--paginated .engage-word-prose tr {
+    break-inside: auto;
+  }
+}
+
 .engage-word-header {
   display: flex;
   align-items: center;

@@ -1508,17 +1508,11 @@ function createEngageImageFigureNodeView({ node, getPos, editor }) {
       return true
     },
     ignoreMutation(mutation) {
-      if (mutation.type === "selection") return false
-      const target = mutation.target
-      if (!(target instanceof Node)) return true
-      return (
-        target === captionInput ||
-        captionInput.contains(target) ||
-        target === sizeSelect ||
-        controls.contains(target) ||
-        slotBtn.contains(target) ||
-        target === fileInput
-      )
+      // This atomic node view owns all its DOM. Image/caption changes are
+      // committed explicitly through commands and commitCaption(), so parsing
+      // paint()'s own style/attribute mutations back into the document creates
+      // a DOMObserver -> update -> paint loop during pagination and typing.
+      return mutation.type !== "selection"
     },
     stopEvent(event) {
       const target = event.target

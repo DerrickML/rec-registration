@@ -129,6 +129,8 @@ export default function PublicScannerPage() {
   const [otpCode, setOtpCode] = useState("")
   const [session, setSession] = useState(null)
   const [events, setEvents] = useState([])
+  const [eventListStatus, setEventListStatus] = useState("loading")
+  const [eventListMessage, setEventListMessage] = useState("")
   const [eventId, setEventId] = useState("")
   const [manualPayload, setManualPayload] = useState("")
   const [scanMode, setScanMode] = useState("camera")
@@ -190,10 +192,16 @@ export default function PublicScannerPage() {
       data = await fetchScannerJson("/api/scanner/events")
     } catch (err) {
       if (err.status === 401) setSession(null)
+      setEvents([])
+      setEventId("")
+      setEventListStatus("error")
+      setEventListMessage("Scan events could not be loaded. Check your connection and refresh events.")
       throw err
     }
     const rows = data.documents || []
     setEvents(rows)
+    setEventListStatus("ready")
+    setEventListMessage(data.emptyReason?.message || "No scan events are available for your account. Ask a conference administrator to review your event access.")
     setEventId((current) => rows.some((row) => row.$id === current) ? current : rows.find((row) => row.isCurrentlyOpen)?.$id || rows[0]?.$id || "")
   }, [])
 
@@ -727,7 +735,8 @@ export default function PublicScannerPage() {
                 Scan Event
                 <select
                   value={eventId}
-                  disabled={loading === "scan" || Boolean(pendingScan)}
+                  disabled={!events.length || loading === "scan" || Boolean(pendingScan)}
+                  aria-describedby={!events.length ? "scanner-events-status" : undefined}
                   onChange={(event) => {
                     stopCamera()
                     pauseSerial()
@@ -737,12 +746,20 @@ export default function PublicScannerPage() {
                   }}
                   className="h-11 w-full min-w-0 max-w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#176F91]"
                 >
+                  {!events.length && <option value="">{eventListStatus === "loading" ? "Loading scan events..." : eventListStatus === "error" ? "Events could not be loaded" : "No events available"}</option>}
                   {events.map((event) => (
                     <option key={event.$id} value={event.$id}>{event.name}{event.isCurrentlyOpen ? "" : " (closed)"}</option>
                   ))}
                 </select>
               </label>
             </div>
+
+            {!events.length && (
+              <div id="scanner-events-status" role="status" className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+                <strong className="block">{eventListStatus === "loading" ? "Loading scan events..." : eventListStatus === "error" ? "Unable to load scan events" : "No scan events available"}</strong>
+                {eventListStatus !== "loading" && <p className="mb-0 mt-1 leading-6">{eventListMessage}</p>}
+              </div>
+            )}
 
             {activeEvent && (
               <div className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
@@ -829,7 +846,7 @@ export default function PublicScannerPage() {
               >
                 <div role="status" aria-live="polite" className={`flex min-w-0 items-center gap-2 text-sm font-semibold ${externalArmed && externalFocused && !scanBlocked ? "text-emerald-800" : "text-amber-900"}`}>
                   {externalArmed && externalFocused && !scanBlocked ? <ScanLine className="h-5 w-5 shrink-0" /> : <PauseCircle className="h-5 w-5 shrink-0" />}
-                  {loading === "scan" ? "Checking badge..." : pendingScan ? "Paused - awaiting scan confirmation" : !online ? "Paused - offline" : !canScanSelectedEvent ? "Paused - scan event is closed" : externalArmed && externalFocused && !scanBlocked ? "Ready for scanner input" : "Scanner input paused"}
+                  {loading === "scan" ? "Checking badge..." : pendingScan ? "Paused - awaiting scan confirmation" : !online ? "Paused - offline" : !activeEvent ? "Paused - no scan event available" : !canScanSelectedEvent ? "Paused - scan event is closed" : externalArmed && externalFocused && !scanBlocked ? "Ready for scanner input" : "Scanner input paused"}
                 </div>
                 <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">
                   Scanner input
@@ -956,7 +973,7 @@ export default function PublicScannerPage() {
             </form>}
 
             <div>
-              <Button variant="outline" className="min-h-11 w-full font-bold sm:w-auto" disabled={loading === "scan"} onClick={() => loadEvents().catch((e) => setError(e.message))}>
+              <Button variant="outline" className="min-h-11 w-full font-bold sm:w-auto" disabled={loading === "scan"} onClick={() => { setError(""); loadEvents().catch((e) => setError(e.message)) }}>
                 <RefreshCcw className="mr-2 h-4 w-4" />
                 Refresh Events
               </Button>

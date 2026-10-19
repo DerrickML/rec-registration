@@ -12,6 +12,7 @@ let scanRequest
 let eventRows
 let requests
 let getUserMedia
+let eventsRequest
 
 const response = (body, status = 200) => ({ ok: status < 400, status, json: async () => body })
 const accepted = () => response({ status: "accepted", registration: { name: "Test attendee" } })
@@ -32,12 +33,13 @@ beforeEach(() => {
   Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: { getUserMedia } })
   vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue()
   eventRows = [openEvent, secondEvent]
+  eventsRequest = async () => response({ documents: eventRows })
   requests = []
   scanRequest = async () => accepted()
   vi.stubGlobal("fetch", vi.fn(async (url, options) => {
     if (url === "/api/scanner/auth/me") return response(session)
     if (url === "/api/scanner/auth/dev-login") return response({ enabled: false })
-    if (url === "/api/scanner/events") return response({ documents: eventRows })
+    if (url === "/api/scanner/events") return eventsRequest()
     if (url === "/api/scanner/scans") {
       requests.push(JSON.parse(options.body))
       return scanRequest(options)
@@ -100,6 +102,53 @@ function scan(input, value = "rec:v1:AbCd_Ef-123") {
   fireEvent.change(input, { target: { value } })
   fireEvent.keyDown(input, { key: "Enter", code: "Enter" })
 }
+
+describe("scanner event availability", () => {
+  it("explains an unavailable assignment instead of rendering a blank dropdown", async () => {
+    eventsRequest = async () => response({ documents: [], emptyReason: { code: "assigned_events_unavailable", message: "Your assigned scan events are unavailable. Ask an administrator to review them." } })
+    render(<PublicScannerPage />)
+    await screen.findByText("Your assigned scan events are unavailable. Ask an administrator to review them.")
+    const select = screen.getByRole("combobox", { name: "Scan Event" })
+    expect(select.disabled).toBe(true)
+    expect(select.options[0].text).toBe("No events available")
+    expect(screen.getByRole("button", { name: "Start Camera" }).disabled).toBe(true)
+    fireEvent.click(screen.getByRole("button", { name: "Manual Entry", exact: true }))
+    expect(screen.getByRole("button", { name: "Submit", exact: true }).disabled).toBe(true)
+    expect(requests).toHaveLength(0)
+    expect(getUserMedia).not.toHaveBeenCalled()
+  })
+
+  it("handles older API responses with no explanation and refreshes after access repair", async () => {
+    eventRows = []
+    render(<PublicScannerPage />)
+    await screen.findByText("No scan events are available for your account. Ask a conference administrator to review your event access.")
+    eventRows = [openEvent]
+    fireEvent.click(screen.getByRole("button", { name: "Refresh Events" }))
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Scan Event" }).value).toBe("entrance"))
+    expect(screen.queryByText("No scan events available")).toBeNull()
+    expect(screen.getByRole("button", { name: "Start Camera" }).disabled).toBe(false)
+  })
+
+  it("distinguishes loading failures from empty permissions and supports retry", async () => {
+    eventsRequest = async () => response({ error: "Service unavailable" }, 503)
+    render(<PublicScannerPage />)
+    await screen.findByText("Unable to load scan events")
+    expect(screen.getByRole("combobox", { name: "Scan Event" }).disabled).toBe(true)
+    eventsRequest = async () => response({ documents: [openEvent] })
+    fireEvent.click(screen.getByRole("button", { name: "Refresh Events" }))
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Scan Event" }).value).toBe("entrance"))
+    expect(screen.queryByText("Unable to load scan events")).toBeNull()
+  })
+
+  it("does not mistake future assigned events for an empty event list", async () => {
+    eventRows = [{ ...openEvent, isCurrentlyOpen: false, availabilityCode: "event_not_started", availabilityMessage: "This scan event has not started yet." }]
+    await mount()
+    expect(screen.getByRole("combobox", { name: "Scan Event" }).disabled).toBe(false)
+    expect(screen.getByText("This scan event has not started yet.")).toBeTruthy()
+    expect(screen.queryByText("No scan events available")).toBeNull()
+    expect(screen.getByRole("button", { name: "Start Camera" }).disabled).toBe(true)
+  })
+})
 
 describe("external REC scanner input", () => {
   it("uses explicit input modes with no camera access when hardware is selected", async () => {

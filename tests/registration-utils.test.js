@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest"
 import {
   deriveConferenceFields,
   normalizeEmail,
+  preserveEmail,
+  buildAttendeeRegistrant,
+  buildExhibitorRegistrants,
   sanitizeRichHtml,
   validateRegistrationInput,
   validateAttendeeInput,
@@ -36,6 +39,21 @@ describe("registration utilities", () => {
   it("normalizes email addresses", () => {
     expect(normalizeEmail("  USER@Example.COM ")).toBe("user@example.com")
     expect(() => normalizeEmail("not-an-email")).toThrow("valid email")
+  })
+
+  it("preserves entered email spelling in registrant data, not in identity keys", () => {
+    const email = " William.Matovu@heifer.org "
+    expect(preserveEmail(email)).toBe("William.Matovu@heifer.org")
+    expect(normalizeEmail(email)).toBe("william.matovu@heifer.org")
+    expect(() => preserveEmail("bad-email")).toThrow("valid email")
+    expect(buildAttendeeRegistrant({ email, otherEmail: " Assistant@Heifer.org " }, conference, null)).toMatchObject({
+      email: "William.Matovu@heifer.org", otherEmail: "Assistant@Heifer.org",
+    })
+    expect(buildExhibitorRegistrants({ members: [{ email }] }, conference, null)[0].email).toBe("William.Matovu@heifer.org")
+    expect(() => validateExhibitorMembers([
+      { firstName: "William", lastName: "Matovu", phone: "0700000000", email },
+      { firstName: "Other", lastName: "Person", phone: "0700000001", email: "william.matovu@HEIFER.ORG" },
+    ])).toThrow("unique email")
   })
 
   it("derives event dates and year from the active conference", () => {

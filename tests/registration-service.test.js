@@ -20,6 +20,7 @@ const query = {
 function matches(row, queries) {
   return queries.every((item) => {
     if (item.type !== "equal") return true
+    if (item.field === "email") return String(row.email || "").toLowerCase() === String(item.value).toLowerCase()
     return row[item.field] === item.value
   })
 }
@@ -140,6 +141,76 @@ async function verifiedExistingRegistrationToken(svc, email) {
 }
 
 describe("registration service", () => {
+  it("retains capitalization through OTP, registration persistence and confirmation emails", async () => {
+    const db = createDb({ conferences: [activeConference()] })
+    const sendOtp = vi.fn(), sendConfirmation = vi.fn(), svc = service(db, { sendOtp, sendConfirmation })
+    const email = "William.Matovu@heifer.org"
+    expect(await svc.start({ email: ` ${email} ` })).toMatchObject({ email, mode: "new" })
+    expect(sendOtp.mock.calls[0][0]).toBe(email)
+    expect(db.tables.verifications[0].email).toBe(email.toLowerCase())
+    const verified = await svc.verifyEdit({ email, otp: "123456" })
+    expect(verified.email).toBe(email)
+    await svc.submit(attendeeInput({ email, editToken: verified.editToken, couponCode: "", otherEmail: "Assistant@Heifer.org" }))
+    expect(db.tables.registrants).toHaveLength(1)
+    expect(db.tables.registrants[0]).toMatchObject({ email, otherEmail: "Assistant@Heifer.org" })
+    expect(sendConfirmation.mock.calls[0][0].email).toBe(email)
+  })
+
+  it("finds a mixed-case existing address and retains its spelling when editing other details", async () => {
+    const person = { ...attendeeInput(), email: "William.Matovu@heifer.org", $id: "person", conferenceYears: [2025] }
+    const db = createDb({ conferences: [activeConference({ couponRequired: true })], registrants: [person] }), svc = service(db)
+    const email = person.email.toLowerCase()
+    expect(await svc.start({ email })).toMatchObject({ mode: "existing" })
+    const verified = await svc.verifyEdit({ email, otp: "123456" })
+    expect(verified.email).toBe(person.email)
+    expect(verified.registrant.email).toBe(person.email)
+    await svc.submit(attendeeInput({ ...verified.registrant, phone: "+256700000009", editToken: verified.editToken, couponCode: "" }))
+    expect(db.tables.registrants).toHaveLength(1)
+    expect(db.tables.registrants[0]).toMatchObject({ $id: "person", email: "William.Matovu@heifer.org", phone: "+256700000009" })
+    expect(db.tables.coupons).toHaveLength(0)
+  })
+
+  it("rejects an OTP after a true email correction but accepts a capitalization-only correction", async () => {
+    for (const changedEmail of ["WILLIAM.Matovu@heifer.org", "corrected@heifer.org"]) {
+      const person = { ...attendeeInput(), email: "William.Matovu@heifer.org", $id: "person", conferenceYears: [2025] }
+      const db = createDb({ conferences: [activeConference()], registrants: [person] }), svc = service(db)
+      await svc.start({ email: person.email })
+      db.tables.registrants[0].email = changedEmail
+      const verification = svc.verifyEdit({ email: "william.matovu@heifer.org", otp: "123456" })
+      if (changedEmail.startsWith("corrected")) {
+        await expect(verification).rejects.toMatchObject({ status: 401 })
+        expect(db.tables.verifications.some(v => v.purpose === "edit-token")).toBe(false)
+      } else expect((await verification).email).toBe(changedEmail)
+    }
+  })
+
+  it("does not reuse an old email verification after an administrative email correction", async () => {
+    const person = { ...attendeeInput(), $id: "person", conferenceYears: [2025] }
+    const db = createDb({ conferences: [activeConference()], registrants: [person] })
+    const svc = service(db), editToken = await verifiedExistingRegistrationToken(svc, person.email)
+    const create = db.createDocument.bind(db)
+    db.createDocument = async (...args) => {
+      if (args[1] === "locks") {
+        db.tables.registrants[0].email = "corrected@example.com"
+        db.tables.verifications.forEach(row => { row.consumed = true })
+      }
+      return create(...args)
+    }
+    await expect(svc.submit(attendeeInput({ editToken, couponCode: "" }))).rejects.toMatchObject({ status: 409 })
+    expect(db.tables.registrants[0].email).toBe("corrected@example.com")
+    expect(db.tables.registrants).toHaveLength(1)
+    expect(db.tables.locks).toHaveLength(0)
+  })
+
+  it("rejects verification tied to another registrant ID even when the email matches", async () => {
+    const person = { ...attendeeInput(), $id: "person", conferenceYears: [2025] }
+    const db = createDb({ conferences: [activeConference()], registrants: [person] })
+    const svc = service(db), editToken = await verifiedExistingRegistrationToken(svc, person.email)
+    db.tables.verifications.filter(row => row.purpose === "edit-token").forEach(row => { row.registrantId = "someone-else" })
+    await expect(svc.submit(attendeeInput({ editToken, couponCode: "" }))).rejects.toMatchObject({ status: 401 })
+    expect(db.tables.registrants).toHaveLength(1)
+  })
+
   it.each([
     [{ usageScope: "exhibitor_application" }, "Company exhibition coupons"],
     [{ conferenceId: "other-conference" }, "selected conference"],
@@ -217,12 +288,12 @@ describe("registration service", () => {
 
     expect(start).toEqual({
       status: "otp_required",
-      email: "new@example.com",
+      email: "NEW@example.com",
       couponRequired: false,
       mode: "new",
       message: "A verification code has been sent to your email address.",
     })
-    expect(mailer.sendOtp).toHaveBeenCalledWith("new@example.com", "123456", 10, expect.objectContaining({ $id: "conf" }))
+    expect(mailer.sendOtp).toHaveBeenCalledWith("NEW@example.com", "123456", 10, expect.objectContaining({ $id: "conf" }))
 
     const verified = await svc.verifyEdit({ email: "new@example.com", otp: "123456" })
     expect(verified.status).toBe("verified_new")
@@ -242,13 +313,13 @@ describe("registration service", () => {
 
     expect(result).toEqual({
       status: "otp_required",
-      email: "old@example.com",
+      email: "OLD@example.com",
       couponRequired: false,
       mode: "existing",
       message: "A verification code has been sent to your email address.",
     })
     expect(result.registrant).toBeUndefined()
-    expect(mailer.sendOtp).toHaveBeenCalledWith("old@example.com", "123456", 10, expect.objectContaining({ $id: "conf" }))
+    expect(mailer.sendOtp).toHaveBeenCalledWith("OLD@example.com", "123456", 10, expect.objectContaining({ $id: "conf" }))
   })
 
   it("rejects wrong OTP attempts and verifies the correct code", async () => {

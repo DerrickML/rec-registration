@@ -78,6 +78,9 @@ export default function ReportingPage() {
   const [history, setHistory] = useState(null)
   const [editorEpoch, setEditorEpoch] = useState(0)
   const [busy, setBusy] = useState(false)
+  const [sessionSearch, setSessionSearch] = useState("")
+  const [sessionStatus, setSessionStatus] = useState("")
+  const [sessionHall, setSessionHall] = useState("")
   const revision = useRef(1)
   const previewAssignment = useRef("")
   const reportRef = useRef(null)
@@ -401,7 +404,10 @@ export default function ReportingPage() {
         nextReport = data.report
         nextComments = data.comments || []
       } else {
-        nextReport = await fetchJson(`/api/reporting/report?sessionKey=${encodeURIComponent(sessionKey)}`)
+        const selected = home.sessions?.find(item => item.sessionKey === sessionKey)
+        nextReport = !selected?.reportId && (!selected?.status || selected.status === "new")
+          ? await fetchJson("/api/reporting/report/start", { method: "POST", body: JSON.stringify({ sessionKey }) })
+          : await fetchJson(`/api/reporting/report?sessionKey=${encodeURIComponent(sessionKey)}`)
         // A failed comments request must not hide successfully loaded report content.
         const thread = await fetchJson(`/api/reporting/comments?sessionKey=${encodeURIComponent(sessionKey)}`).catch(() => ({ comments: [] }))
         nextComments = thread.comments || []
@@ -520,7 +526,11 @@ export default function ReportingPage() {
     if (session.status === "submitted" || session.status === "approved") return "Read"
     return "Write"
   }
-  const groups = sessionGroups(sessions)
+  const matchingSessions = sessions.filter(session => {
+    const haystack = `${session.title} ${session.hall} ${session.sessionDate}`.toLowerCase()
+    return (!sessionSearch || haystack.includes(sessionSearch.toLowerCase())) && (!sessionStatus || (session.status || "new") === sessionStatus) && (!sessionHall || session.hall === sessionHall)
+  })
+  const groups = sessionGroups(matchingSessions)
   const defaultDay = groups.find((group) => group.items.some((session) => session.sessionKey === nextKey))?.label || groups[0]?.label || ""
   const activeDay = groups.some((group) => group.label === pickedDay) ? pickedDay : defaultDay
   const activeGroup = groups.find((group) => group.label === activeDay)
@@ -662,6 +672,17 @@ export default function ReportingPage() {
       </header>}
       {onDesk ? (
         <div className="rec-side-main">
+          <header className="rec-report-workspace-heading">
+            <h1>My sessions</h1>
+            <p>{home.conference?.title || "Conference reporting"}</p>
+            {home.readOnly ? <p className="rec-desk-state">Read-only administrative preview</p> : null}
+            {home.deadline ? <p>Reporting deadline: {new Date(home.deadline).toLocaleString("en-GB", { timeZone: "Africa/Kampala" })}</p> : null}
+          </header>
+          <div className="rec-report-filters">
+            <label>Find a session<input type="search" value={sessionSearch} onChange={event => setSessionSearch(event.target.value)} placeholder="Session title, hall or day" /></label>
+            <label>Status<select value={sessionStatus} onChange={event => setSessionStatus(event.target.value)}><option value="">All statuses</option>{["new","draft","submitted","returned","approved"].map(value => <option key={value} value={value}>{STATUS[value]}</option>)}</select></label>
+            {severalHalls ? <label>Hall<select value={sessionHall} onChange={event => setSessionHall(event.target.value)}><option value="">All my halls</option>{home.halls.map(hall => <option key={hall}>{hall}</option>)}</select></label> : null}
+          </div>
           {error ? <p className="warn" role="alert">{error}</p> : null}
           {notice ? <p className="rec-desk-notice" role="status">{notice}</p> : null}
           {activeGroup ? (
@@ -669,7 +690,7 @@ export default function ReportingPage() {
               <h1>{activeGroup.label}</h1>
               <div className="rec-desk-table">
                 {activeGroup.items.map((session) => (
-                  <button className={`rec-desk-row is-${session.status || "new"}${session.sessionKey === nextKey ? " is-next" : ""}`} type="button" key={session.sessionKey} disabled={busy} onClick={() => openSession(session.sessionKey)}>
+                  <button className={`rec-desk-row is-${session.status || "new"}${session.sessionKey === nextKey ? " is-next" : ""}`} type="button" key={session.sessionKey} disabled={busy || Boolean(home.readOnly && (!session.status || session.status === "new"))} onClick={() => openSession(session.sessionKey)}>
                     <span className="rec-desk-time">
                       <span>{session.startTime || "Time not set"}</span>
                       {session.endTime ? <span>{session.endTime}</span> : null}
@@ -686,7 +707,7 @@ export default function ReportingPage() {
                 ))}
               </div>
             </section>
-          ) : <p className="quiet">No sessions in your hall yet.</p>}
+          ) : <p className="quiet">No assigned sessions match these filters.</p>}
         </div>
       ) : null}
       {onDesk ? null : <div className="rec-desk">
@@ -748,7 +769,8 @@ export default function ReportingPage() {
             {saveState && !recoveryCopies.length ? <button type="button" className="plain" disabled={busy || saveState?.status === "conflict"} onClick={() => flushCurrent().catch((err) => setError(err.message))}>Save now</button> : null}
             <button type="button" className="plain" disabled={busy} onClick={loadHistory}>Version history</button>
             {editable && !reportContentReady(content) ? <span className="rec-report-need">Write the Purpose of the Session to send this report.</span> : null}
-            {editable ? <button type="button" className="gold" disabled={busy || !reportContentReady(content)} onClick={submitReport}>Send to approver</button> : null}
+            {editable ? <button type="button" className="gold" disabled={busy || !reportContentReady(content) || report.canSubmit === false} onClick={submitReport}>Send to approver</button> : null}
+            {editable && report.canSubmit === false ? <span className="rec-report-need">The lead rapporteur submits this shared report.</span> : null}
           </div>
           {saveState?.recoveryStatus === "unavailable" ? <p className="warn" role="alert">This browser could not keep a recovery copy. {saveState.recoveryError?.message || "Keep the report open until it is saved, or download a copy."}</p> : null}
           {saveState?.status === "conflict" ? <p className="warn" role="alert">Keep this tab open or download your writing. Open the saved report in another tab to compare versions before recovering this browser copy.</p> : null}

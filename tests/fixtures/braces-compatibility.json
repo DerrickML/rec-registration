@@ -1,0 +1,29 @@
+[
+  { "input": "src/**/*.{js,ts,jsx,tsx,mdx}" },
+  { "input": "a/{b,c}/d" },
+  { "input": "a/{b,{c,d}}/e" },
+  { "input": "file{01..03}" },
+  { "input": "file{5..1..2}" },
+  { "input": "file{-3..3..2}" },
+  { "input": "{a..e..2}" },
+  {
+    "input": "{foo,foo,,bar}",
+    "options": { "nodupes": true, "noempty": true }
+  },
+  { "input": "src/{pages,components}/**/*.{js,jsx}" },
+  { "input": "foo/{bar,baz}/qux", "options": { "expand": true } },
+  { "input": "foo/{bar,baz}/qux", "options": { "expand": false } },
+  { "input": "literal\\{a,b\\}", "options": { "keepEscaping": true } },
+  { "input": "'quoted{a,b}'", "options": { "keepQuotes": true } },
+  { "input": "\"quoted{a,b}\"" },
+  { "input": "${variable}/foo" },
+  { "input": "[{}]/{a,b}" },
+  { "input": "foo{bar" },
+  { "input": "foo{bar}", "options": { "escapeInvalid": true } },
+  { "input": "foo(bar|baz)/{x,y}" },
+  { "input": "!(foo|bar)/{a,b}" },
+  { "input": "a/{b,c}/d", "options": { "maxLength": 3 } },
+  { "input": "{1..20}", "options": { "rangeLimit": 5 } },
+  { "input": "" },
+  { "input": "foo//bar/../baz" }
+]

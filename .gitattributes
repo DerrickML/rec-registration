@@ -1,2 +1,4 @@
 # Enforce LF endings for shell scripts
 *.sh text eol=lf
+vendor/braces/** text eol=lf
+vendor/*.tgz binary
